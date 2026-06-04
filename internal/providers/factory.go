@@ -13,9 +13,10 @@ import (
 )
 
 type IndexingProviders struct {
-	Chunker  rag.ChunkingProvider
-	Embedder rag.EmbeddingProvider
-	Vector   rag.VectorStoreProvider
+	Extractor rag.DocumentExtractor
+	Chunker   rag.ChunkingProvider
+	Embedder  rag.EmbeddingProvider
+	Vector    rag.VectorStoreProvider
 }
 
 type QueryProviders struct {
@@ -37,15 +38,16 @@ func NewIndexingProviders(ctx context.Context, cfg config.Config) (IndexingProvi
 			APIKey:    cfg.PineconeAPIKey,
 			Namespace: cfg.PineconeNamespace,
 		}
-		return IndexingProviders{Chunker: chunker, Embedder: embedder, Vector: vector}, nil
+		return IndexingProviders{Extractor: langchain.Extractor{}, Chunker: chunker, Embedder: embedder, Vector: vector}, nil
 	}
 	if cfg.ProviderMode != "mock" {
 		return IndexingProviders{}, fmt.Errorf("unsupported PROVIDER_MODE %q", cfg.ProviderMode)
 	}
 	return IndexingProviders{
-		Chunker:  chunker,
-		Embedder: mock.Embeddings{Dimension: 3072, Model: "mock-embedding"},
-		Vector:   &mock.VectorStore{},
+		Extractor: langchain.Extractor{},
+		Chunker:   chunker,
+		Embedder:  mock.Embeddings{Dimension: 3072, Model: "mock-embedding"},
+		Vector:    &mock.VectorStore{},
 	}, nil
 }
 

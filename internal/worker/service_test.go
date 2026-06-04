@@ -33,6 +33,7 @@ func TestProcessJobIndexesDocument(t *testing.T) {
 	vector := &mock.VectorStore{}
 	service := NewService(
 		store,
+		langchain.Extractor{},
 		langchain.RecursiveChunker{ChunkSize: 80, ChunkOverlap: 5},
 		mock.Embeddings{Dimension: 8},
 		vector,
