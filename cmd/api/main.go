@@ -10,7 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tarunngusain08/RAG-bot/internal/auth"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
+	"github.com/tarunngusain08/RAG-bot/internal/database"
+	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/httpapi"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
 )
@@ -39,9 +42,27 @@ func main() {
 		}
 	}()
 
+	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("connect database", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	authService, err := auth.NewService(db.New(pool), cfg.JWTSecret)
+	if err != nil {
+		logger.Error("init auth", "error", err)
+		os.Exit(1)
+	}
+	if err := authService.SeedAdmin(ctx, cfg.AdminEmail, cfg.AdminPassword); err != nil {
+		logger.Error("seed admin", "error", err)
+		os.Exit(1)
+	}
+
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Config: cfg,
 		Logger: logger,
+		Auth:   authService,
 	})
 
 	server := &http.Server{
@@ -71,4 +92,3 @@ func main() {
 		}
 	}
 }
-

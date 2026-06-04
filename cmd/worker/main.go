@@ -26,4 +26,3 @@ func main() {
 	<-ctx.Done()
 	logger.Info("worker stopped")
 }
-

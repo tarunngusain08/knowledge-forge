@@ -14,6 +14,8 @@ type Config struct {
 	LogLevel        string
 	DatabaseURL     string
 	JWTSecret       string
+	AdminEmail      string
+	AdminPassword   string
 	ShutdownTimeout time.Duration
 	MaxUploadBytes  int64
 }
@@ -26,6 +28,8 @@ func Load() (Config, error) {
 		LogLevel:        getenv("LOG_LEVEL", "info"),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		JWTSecret:       os.Getenv("JWT_SECRET"),
+		AdminEmail:      os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:   os.Getenv("ADMIN_PASSWORD"),
 		ShutdownTimeout: getDuration("SHUTDOWN_TIMEOUT", 10*time.Second),
 		MaxUploadBytes:  getInt64("MAX_UPLOAD_BYTES", 20*1024*1024),
 	}
@@ -66,4 +70,3 @@ func getInt64(key string, fallback int64) int64 {
 	}
 	return parsed
 }
-
