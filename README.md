@@ -29,6 +29,8 @@ docker compose up --build
 
 The API exposes `GET /healthz` on port `8080`.
 
+The Streamlit demo UI runs on port `8501` when using Docker Compose.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
