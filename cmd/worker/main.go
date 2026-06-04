@@ -41,6 +41,7 @@ func main() {
 	}
 	service := worker.NewService(
 		db.New(pool),
+		indexingProviders.Extractor,
 		indexingProviders.Chunker,
 		indexingProviders.Embedder,
 		indexingProviders.Vector,

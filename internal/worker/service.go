@@ -30,6 +30,7 @@ type Store interface {
 
 type Service struct {
 	store      Store
+	extractor  rag.DocumentExtractor
 	chunker    rag.ChunkingProvider
 	embedder   rag.EmbeddingProvider
 	vector     rag.VectorStoreProvider
@@ -37,14 +38,14 @@ type Service struct {
 	workerName string
 }
 
-func NewService(store Store, chunker rag.ChunkingProvider, embedder rag.EmbeddingProvider, vector rag.VectorStoreProvider, logger *slog.Logger, workerName string) *Service {
+func NewService(store Store, extractor rag.DocumentExtractor, chunker rag.ChunkingProvider, embedder rag.EmbeddingProvider, vector rag.VectorStoreProvider, logger *slog.Logger, workerName string) *Service {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	if workerName == "" {
 		workerName = "worker"
 	}
-	return &Service{store: store, chunker: chunker, embedder: embedder, vector: vector, logger: logger, workerName: workerName}
+	return &Service{store: store, extractor: extractor, chunker: chunker, embedder: embedder, vector: vector, logger: logger, workerName: workerName}
 }
 
 func (s *Service) Lease(ctx context.Context, limit int32) ([]db.IndexingJob, error) {
@@ -106,7 +107,7 @@ func (s *Service) processDocument(ctx context.Context, documentID uuid.UUID) err
 		return fmt.Errorf("mark document indexing: %w", err)
 	}
 
-	text, err := documents.ExtractPlainText(document.Filename, document.RawBytes)
+	text, err := s.extractor.Extract(ctx, document.Filename, document.RawBytes)
 	if err != nil {
 		return fmt.Errorf("extract document text: %w", err)
 	}

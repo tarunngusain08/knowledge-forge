@@ -144,6 +144,10 @@ type ChunkingProvider interface {
 	Split(ctx context.Context, input ChunkInput) ([]Chunk, error)
 }
 
+type DocumentExtractor interface {
+	Extract(ctx context.Context, filename string, content []byte) (string, error)
+}
+
 type Retriever interface {
 	Retrieve(ctx context.Context, req RetrievalRequest) (RetrievalResult, error)
 }
