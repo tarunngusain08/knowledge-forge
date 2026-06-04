@@ -16,6 +16,7 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/database"
 	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
+	"github.com/tarunngusain08/RAG-bot/internal/evaluation"
 	"github.com/tarunngusain08/RAG-bot/internal/httpapi"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
 	"github.com/tarunngusain08/RAG-bot/internal/providers"
@@ -85,15 +86,17 @@ func main() {
 	lexical := retrieval.NewPostgresFTS(db.New(pool))
 	retriever := retrieval.NewService(db.New(pool), queryProviders.Embedder, queryProviders.Vector, lexical, queryProviders.Reranker)
 	chatService := chat.NewService(db.New(pool), queryProviders.LLM, retriever)
+	evalService := evaluation.NewService(db.New(pool), retriever)
 
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Config:    cfg,
-		Logger:    logger,
-		Auth:      authService,
-		Documents: documentService,
-		Worker:    workerService,
-		Chat:      chatService,
-		Retriever: retriever,
+		Config:     cfg,
+		Logger:     logger,
+		Auth:       authService,
+		Documents:  documentService,
+		Worker:     workerService,
+		Chat:       chatService,
+		Retriever:  retriever,
+		Evaluation: evalService,
 	})
 
 	server := &http.Server{

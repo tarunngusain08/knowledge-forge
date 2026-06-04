@@ -12,19 +12,21 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/chat"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
+	"github.com/tarunngusain08/RAG-bot/internal/evaluation"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
 	"github.com/tarunngusain08/RAG-bot/internal/rag"
 	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
 type Dependencies struct {
-	Config    config.Config
-	Logger    *slog.Logger
-	Auth      *auth.Service
-	Documents *documents.Service
-	Worker    *worker.Service
-	Chat      *chat.Service
-	Retriever rag.Retriever
+	Config     config.Config
+	Logger     *slog.Logger
+	Auth       *auth.Service
+	Documents  *documents.Service
+	Worker     *worker.Service
+	Chat       *chat.Service
+	Retriever  rag.Retriever
+	Evaluation *evaluation.Service
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -34,6 +36,7 @@ func NewRouter(deps Dependencies) http.Handler {
 		worker:         deps.Worker,
 		chat:           deps.Chat,
 		retriever:      deps.Retriever,
+		evaluation:     deps.Evaluation,
 		maxUploadBytes: deps.Config.MaxUploadBytes,
 	}
 	r := chi.NewRouter()
@@ -69,6 +72,10 @@ func NewRouter(deps Dependencies) http.Handler {
 			if deps.Retriever != nil {
 				protected.Get("/debug/retrieval", server.handleDebugRetrieval)
 			}
+			if deps.Evaluation != nil {
+				protected.Post("/eval/runs", server.handleCreateEvalRun)
+				protected.Get("/eval/runs/{id}", server.handleGetEvalRun)
+			}
 		})
 	}
 	if deps.Worker != nil {
@@ -84,6 +91,7 @@ type Server struct {
 	worker         *worker.Service
 	chat           *chat.Service
 	retriever      rag.Retriever
+	evaluation     *evaluation.Service
 	maxUploadBytes int64
 }
 

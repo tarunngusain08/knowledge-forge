@@ -24,6 +24,13 @@ Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
 exact identifiers, acronyms, filenames, and policy names. Reciprocal Rank Fusion
 combines both candidate sets before reranking.
 
+## Evaluation
+
+The Go API computes retrieval metrics: Hit Rate, Recall@K, MRR, retrieval
+latency, and citation coverage. The Python `eval-runner` owns the Ragas JSONL
+contract for generation metrics: faithfulness, answer relevancy, context
+precision, and context recall.
+
 ## Provider Boundaries
 
 Core business logic depends on interfaces in `internal/rag`:
