@@ -8,48 +8,54 @@ import (
 )
 
 type Config struct {
-	ServiceName       string
-	Environment       string
-	HTTPPort          string
-	LogLevel          string
-	DatabaseURL       string
-	JWTSecret         string
-	AdminEmail        string
-	AdminPassword     string
-	ProviderMode      string
-	GoogleProjectID   string
-	GoogleLocation    string
-	VertexEmbedModel  string
-	PineconeAPIKey    string
-	PineconeHost      string
-	PineconeNamespace string
-	WorkerName        string
-	WorkerBatchSize   int64
-	ShutdownTimeout   time.Duration
-	MaxUploadBytes    int64
+	ServiceName           string
+	Environment           string
+	HTTPPort              string
+	LogLevel              string
+	DatabaseURL           string
+	JWTSecret             string
+	AdminEmail            string
+	AdminPassword         string
+	ProviderMode          string
+	GoogleProjectID       string
+	GoogleLocation        string
+	VertexEmbedModel      string
+	VertexChatModel       string
+	VertexRankingModel    string
+	VertexRankingLocation string
+	PineconeAPIKey        string
+	PineconeHost          string
+	PineconeNamespace     string
+	WorkerName            string
+	WorkerBatchSize       int64
+	ShutdownTimeout       time.Duration
+	MaxUploadBytes        int64
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		ServiceName:       getenv("SERVICE_NAME", "rag-bot-api"),
-		Environment:       getenv("ENVIRONMENT", "local"),
-		HTTPPort:          getenv("HTTP_PORT", "8080"),
-		LogLevel:          getenv("LOG_LEVEL", "info"),
-		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		JWTSecret:         os.Getenv("JWT_SECRET"),
-		AdminEmail:        os.Getenv("ADMIN_EMAIL"),
-		AdminPassword:     os.Getenv("ADMIN_PASSWORD"),
-		ProviderMode:      getenv("PROVIDER_MODE", "mock"),
-		GoogleProjectID:   os.Getenv("GOOGLE_CLOUD_PROJECT"),
-		GoogleLocation:    getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
-		VertexEmbedModel:  getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001"),
-		PineconeAPIKey:    os.Getenv("PINECONE_API_KEY"),
-		PineconeHost:      os.Getenv("PINECONE_HOST"),
-		PineconeNamespace: getenv("PINECONE_NAMESPACE", "default"),
-		WorkerName:        getenv("WORKER_NAME", "rag-bot-worker"),
-		WorkerBatchSize:   getInt64("WORKER_BATCH_SIZE", 2),
-		ShutdownTimeout:   getDuration("SHUTDOWN_TIMEOUT", 10*time.Second),
-		MaxUploadBytes:    getInt64("MAX_UPLOAD_BYTES", 20*1024*1024),
+		ServiceName:           getenv("SERVICE_NAME", "rag-bot-api"),
+		Environment:           getenv("ENVIRONMENT", "local"),
+		HTTPPort:              getenv("HTTP_PORT", "8080"),
+		LogLevel:              getenv("LOG_LEVEL", "info"),
+		DatabaseURL:           os.Getenv("DATABASE_URL"),
+		JWTSecret:             os.Getenv("JWT_SECRET"),
+		AdminEmail:            os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:         os.Getenv("ADMIN_PASSWORD"),
+		ProviderMode:          getenv("PROVIDER_MODE", "mock"),
+		GoogleProjectID:       os.Getenv("GOOGLE_CLOUD_PROJECT"),
+		GoogleLocation:        getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+		VertexEmbedModel:      getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001"),
+		VertexChatModel:       getenv("VERTEX_CHAT_MODEL", "gemini-2.5-flash"),
+		VertexRankingModel:    getenv("VERTEX_RANKING_MODEL", "semantic-ranker-default@latest"),
+		VertexRankingLocation: getenv("VERTEX_RANKING_LOCATION", "global"),
+		PineconeAPIKey:        os.Getenv("PINECONE_API_KEY"),
+		PineconeHost:          os.Getenv("PINECONE_HOST"),
+		PineconeNamespace:     getenv("PINECONE_NAMESPACE", "default"),
+		WorkerName:            getenv("WORKER_NAME", "rag-bot-worker"),
+		WorkerBatchSize:       getInt64("WORKER_BATCH_SIZE", 2),
+		ShutdownTimeout:       getDuration("SHUTDOWN_TIMEOUT", 10*time.Second),
+		MaxUploadBytes:        getInt64("MAX_UPLOAD_BYTES", 20*1024*1024),
 	}
 
 	if cfg.MaxUploadBytes <= 0 {

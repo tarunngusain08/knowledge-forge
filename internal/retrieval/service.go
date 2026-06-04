@@ -22,10 +22,11 @@ type Service struct {
 	embedder rag.EmbeddingProvider
 	vector   rag.VectorStoreProvider
 	lexical  rag.LexicalSearchProvider
+	reranker rag.RerankerProvider
 }
 
-func NewService(store ChunkStore, embedder rag.EmbeddingProvider, vector rag.VectorStoreProvider, lexical rag.LexicalSearchProvider) *Service {
-	return &Service{store: store, embedder: embedder, vector: vector, lexical: lexical}
+func NewService(store ChunkStore, embedder rag.EmbeddingProvider, vector rag.VectorStoreProvider, lexical rag.LexicalSearchProvider, reranker rag.RerankerProvider) *Service {
+	return &Service{store: store, embedder: embedder, vector: vector, lexical: lexical, reranker: reranker}
 }
 
 func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.RetrievalResult, error) {
@@ -53,8 +54,15 @@ func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.R
 		return rag.RetrievalResult{}, fmt.Errorf("lexical search: %w", err)
 	}
 	fused := ReciprocalRankFusion(hydratedDense, lexicalHits, candidateK)
-	if len(fused) > topK {
-		fused = fused[:topK]
+	reranked := fused
+	if req.RerankerEnabled && s.reranker != nil && len(fused) > 0 {
+		reranked, err = s.rerank(ctx, query, fused, topK)
+		if err != nil {
+			return rag.RetrievalResult{}, err
+		}
+	}
+	if len(reranked) > topK {
+		reranked = reranked[:topK]
 	}
 	return rag.RetrievalResult{
 		OriginalQuery:  req.Query,
@@ -62,9 +70,35 @@ func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.R
 		DenseHits:      hydratedDense,
 		LexicalHits:    lexicalHits,
 		FusedHits:      fused,
-		RerankedHits:   fused,
+		RerankedHits:   reranked,
 		Latency:        time.Since(start),
 	}, nil
+}
+
+func (s *Service) rerank(ctx context.Context, query string, hits []rag.RetrievalHit, topK int) ([]rag.RetrievalHit, error) {
+	docs := make([]rag.RerankDocument, 0, len(hits))
+	byID := map[string]rag.RetrievalHit{}
+	for _, hit := range hits {
+		id := hit.Chunk.VectorID
+		docs = append(docs, rag.RerankDocument{ID: id, Content: hit.Chunk.Content})
+		byID[id] = hit
+	}
+	results, err := s.reranker.Rerank(ctx, query, docs, topK)
+	if err != nil {
+		return nil, fmt.Errorf("rerank candidates: %w", err)
+	}
+	reranked := make([]rag.RetrievalHit, 0, len(results))
+	for i, result := range results {
+		hit, ok := byID[result.ID]
+		if !ok {
+			continue
+		}
+		hit.RerankScore = result.Score
+		hit.FusedRank = i + 1
+		hit.Reasons = appendMissing(hit.Reasons, "vertex_ranking")
+		reranked = append(reranked, hit)
+	}
+	return reranked, nil
 }
 
 func (s *Service) hydrateDense(ctx context.Context, hits []rag.RetrievalHit) ([]rag.RetrievalHit, error) {
