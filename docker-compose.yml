@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ragbot
+      POSTGRES_USER: ragbot
+      POSTGRES_PASSWORD: ragbot
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragbot -d ragbot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgres://ragbot:ragbot@postgres:5432/ragbot?sslmode=disable
+      JWT_SECRET: local-dev-secret
+      HTTP_PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgres://ragbot:ragbot@postgres:5432/ragbot?sslmode=disable
+      JWT_SECRET: local-dev-secret
+      SERVICE_NAME: rag-bot-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+
