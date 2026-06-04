@@ -9,8 +9,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tarunngusain08/RAG-bot/internal/auth"
+	"github.com/tarunngusain08/RAG-bot/internal/chat"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
+	"github.com/tarunngusain08/RAG-bot/internal/rag"
 	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
@@ -20,6 +22,8 @@ type Dependencies struct {
 	Auth      *auth.Service
 	Documents *documents.Service
 	Worker    *worker.Service
+	Chat      *chat.Service
+	Retriever rag.Retriever
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -27,6 +31,8 @@ func NewRouter(deps Dependencies) http.Handler {
 		auth:           deps.Auth,
 		documents:      deps.Documents,
 		worker:         deps.Worker,
+		chat:           deps.Chat,
+		retriever:      deps.Retriever,
 		maxUploadBytes: deps.Config.MaxUploadBytes,
 	}
 	r := chi.NewRouter()
@@ -53,6 +59,14 @@ func NewRouter(deps Dependencies) http.Handler {
 				protected.Get("/documents/{id}", server.handleGetDocument)
 				protected.Delete("/documents/{id}", server.handleDeleteDocument)
 			}
+			if deps.Chat != nil {
+				protected.Post("/chat/sessions", server.handleCreateChatSession)
+				protected.Get("/chat/sessions/{id}", server.handleGetChatSession)
+				protected.Post("/chat/sessions/{id}/messages", server.handleCreateChatMessage)
+			}
+			if deps.Retriever != nil {
+				protected.Get("/debug/retrieval", server.handleDebugRetrieval)
+			}
 		})
 	}
 	if deps.Worker != nil {
@@ -66,6 +80,8 @@ type Server struct {
 	auth           *auth.Service
 	documents      *documents.Service
 	worker         *worker.Service
+	chat           *chat.Service
+	retriever      rag.Retriever
 	maxUploadBytes int64
 }
 

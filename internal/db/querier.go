@@ -13,11 +13,16 @@ import (
 type Querier interface {
 	CountChunksByDocument(ctx context.Context, documentID uuid.UUID) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
+	CreateChatSession(ctx context.Context, arg CreateChatSessionParams) (ChatSession, error)
 	CreateChunk(ctx context.Context, arg CreateChunkParams) (CreateChunkRow, error)
+	CreateCitation(ctx context.Context, arg CreateCitationParams) (Citation, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (CreateDocumentRow, error)
 	CreateIndexingJob(ctx context.Context, documentID uuid.UUID) (IndexingJob, error)
+	CreateRetrievalTrace(ctx context.Context, arg CreateRetrievalTraceParams) (RetrievalTrace, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteChunksByDocument(ctx context.Context, documentID uuid.UUID) error
+	GetChatSession(ctx context.Context, arg GetChatSessionParams) (ChatSession, error)
 	GetChunkByVectorID(ctx context.Context, arg GetChunkByVectorIDParams) (GetChunkByVectorIDRow, error)
 	GetDocumentByHash(ctx context.Context, arg GetDocumentByHashParams) (GetDocumentByHashRow, error)
 	GetDocumentByIDAndOwner(ctx context.Context, arg GetDocumentByIDAndOwnerParams) (GetDocumentByIDAndOwnerRow, error)
@@ -25,6 +30,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	LeaseIndexingJobs(ctx context.Context, arg LeaseIndexingJobsParams) ([]IndexingJob, error)
+	ListChatMessages(ctx context.Context, sessionID uuid.UUID) ([]ChatMessage, error)
 	ListDocumentsByOwner(ctx context.Context, ownerUserID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
 	MarkDocumentDeleted(ctx context.Context, arg MarkDocumentDeletedParams) error
 	MarkDocumentStatus(ctx context.Context, arg MarkDocumentStatusParams) (MarkDocumentStatusRow, error)
