@@ -14,6 +14,7 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/database"
 	"github.com/tarunngusain08/RAG-bot/internal/db"
+	"github.com/tarunngusain08/RAG-bot/internal/documents"
 	"github.com/tarunngusain08/RAG-bot/internal/httpapi"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
 )
@@ -58,11 +59,13 @@ func main() {
 		logger.Error("seed admin", "error", err)
 		os.Exit(1)
 	}
+	documentService := documents.NewService(db.New(pool), documents.NoopVirusScanner{}, cfg.MaxUploadBytes)
 
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Config: cfg,
-		Logger: logger,
-		Auth:   authService,
+		Config:    cfg,
+		Logger:    logger,
+		Auth:      authService,
+		Documents: documentService,
 	})
 
 	server := &http.Server{

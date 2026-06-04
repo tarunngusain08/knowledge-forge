@@ -21,12 +21,19 @@ type User struct {
 }
 
 type Service struct {
-	store     db.Querier
+	store     UserStore
 	jwtSecret []byte
 	now       func() time.Time
 }
 
-func NewService(store db.Querier, jwtSecret string) (*Service, error) {
+type UserStore interface {
+	CountUsers(ctx context.Context) (int64, error)
+	CreateUser(ctx context.Context, arg db.CreateUserParams) (db.User, error)
+	GetUserByEmail(ctx context.Context, email string) (db.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (db.User, error)
+}
+
+func NewService(store UserStore, jwtSecret string) (*Service, error) {
 	if store == nil {
 		return nil, errors.New("auth store is required")
 	}

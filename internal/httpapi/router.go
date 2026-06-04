@@ -10,16 +10,22 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tarunngusain08/RAG-bot/internal/auth"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
+	"github.com/tarunngusain08/RAG-bot/internal/documents"
 )
 
 type Dependencies struct {
-	Config config.Config
-	Logger *slog.Logger
-	Auth   *auth.Service
+	Config    config.Config
+	Logger    *slog.Logger
+	Auth      *auth.Service
+	Documents *documents.Service
 }
 
 func NewRouter(deps Dependencies) http.Handler {
-	server := &Server{auth: deps.Auth}
+	server := &Server{
+		auth:           deps.Auth,
+		documents:      deps.Documents,
+		maxUploadBytes: deps.Config.MaxUploadBytes,
+	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -38,6 +44,12 @@ func NewRouter(deps Dependencies) http.Handler {
 		r.Group(func(protected chi.Router) {
 			protected.Use(auth.Middleware(deps.Auth))
 			protected.Get("/me", server.handleMe)
+			if deps.Documents != nil {
+				protected.Post("/documents", server.handleUploadDocument)
+				protected.Get("/documents", server.handleListDocuments)
+				protected.Get("/documents/{id}", server.handleGetDocument)
+				protected.Delete("/documents/{id}", server.handleDeleteDocument)
+			}
 		})
 	}
 
@@ -45,7 +57,9 @@ func NewRouter(deps Dependencies) http.Handler {
 }
 
 type Server struct {
-	auth *auth.Service
+	auth           *auth.Service
+	documents      *documents.Service
+	maxUploadBytes int64
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

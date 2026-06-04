@@ -11,10 +11,21 @@ import (
 )
 
 type Querier interface {
+	CountChunksByDocument(ctx context.Context, documentID uuid.UUID) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	CreateChunk(ctx context.Context, arg CreateChunkParams) (CreateChunkRow, error)
+	CreateDocument(ctx context.Context, arg CreateDocumentParams) (CreateDocumentRow, error)
+	CreateIndexingJob(ctx context.Context, documentID uuid.UUID) (IndexingJob, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteChunksByDocument(ctx context.Context, documentID uuid.UUID) error
+	GetDocumentByHash(ctx context.Context, arg GetDocumentByHashParams) (GetDocumentByHashRow, error)
+	GetDocumentByIDAndOwner(ctx context.Context, arg GetDocumentByIDAndOwnerParams) (GetDocumentByIDAndOwnerRow, error)
+	GetDocumentBytes(ctx context.Context, id uuid.UUID) (Document, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	ListDocumentsByOwner(ctx context.Context, ownerUserID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
+	MarkDocumentDeleted(ctx context.Context, arg MarkDocumentDeletedParams) error
+	MarkDocumentStatus(ctx context.Context, arg MarkDocumentStatusParams) (MarkDocumentStatusRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

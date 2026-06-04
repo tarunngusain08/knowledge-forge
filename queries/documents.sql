@@ -1,0 +1,65 @@
+-- name: CreateDocument :one
+INSERT INTO documents (
+    owner_user_id,
+    filename,
+    content_type,
+    size_bytes,
+    sha256,
+    raw_bytes,
+    status
+) VALUES (
+    $1, $2, $3, $4, $5, $6, 'uploaded'
+)
+RETURNING id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at;
+
+-- name: GetDocumentByHash :one
+SELECT id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at
+FROM documents
+WHERE owner_user_id = $1 AND sha256 = $2 AND status <> 'deleted';
+
+-- name: ListDocumentsByOwner :many
+SELECT id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at
+FROM documents
+WHERE owner_user_id = $1 AND status <> 'deleted'
+ORDER BY created_at DESC;
+
+-- name: GetDocumentByIDAndOwner :one
+SELECT id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at
+FROM documents
+WHERE id = $1 AND owner_user_id = $2 AND status <> 'deleted';
+
+-- name: GetDocumentBytes :one
+SELECT id, owner_user_id, filename, content_type, size_bytes, sha256, raw_bytes, status, error_message, created_at, updated_at
+FROM documents
+WHERE id = $1 AND status <> 'deleted';
+
+-- name: MarkDocumentStatus :one
+UPDATE documents
+SET status = $2, error_message = $3, updated_at = now()
+WHERE id = $1
+RETURNING id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at;
+
+-- name: MarkDocumentDeleted :exec
+UPDATE documents
+SET status = 'deleted', updated_at = now()
+WHERE id = $1 AND owner_user_id = $2;
+
+-- name: CreateIndexingJob :one
+INSERT INTO indexing_jobs (document_id, status)
+VALUES ($1, 'queued')
+RETURNING id, document_id, status, attempts, max_attempts, error_message, locked_at, locked_by, run_after, created_at, updated_at;
+
+-- name: CreateChunk :one
+INSERT INTO chunks (document_id, chunk_index, content, page_number, token_count, metadata)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, document_id, chunk_index, content, page_number, token_count, metadata, created_at;
+
+-- name: DeleteChunksByDocument :exec
+DELETE FROM chunks
+WHERE document_id = $1;
+
+-- name: CountChunksByDocument :one
+SELECT count(*)
+FROM chunks
+WHERE document_id = $1;
+

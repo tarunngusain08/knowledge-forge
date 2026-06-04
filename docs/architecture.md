@@ -34,3 +34,10 @@ Core business logic depends on interfaces in `internal/rag`:
 
 Implementations live under `internal/providers`. LangChainGo is currently used
 only by the chunking adapter.
+
+## Document Storage
+
+v1 stores uploaded source files in PostgreSQL `BYTEA`. This keeps local and
+Cloud Run setup small and makes upload + metadata changes transactional. For
+larger production deployments, raw file bytes should move to GCS while
+PostgreSQL keeps document metadata, object URI, checksum, and indexing state.
