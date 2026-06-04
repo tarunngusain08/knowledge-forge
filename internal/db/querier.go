@@ -18,14 +18,19 @@ type Querier interface {
 	CreateIndexingJob(ctx context.Context, documentID uuid.UUID) (IndexingJob, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteChunksByDocument(ctx context.Context, documentID uuid.UUID) error
+	GetChunkByVectorID(ctx context.Context, arg GetChunkByVectorIDParams) (GetChunkByVectorIDRow, error)
 	GetDocumentByHash(ctx context.Context, arg GetDocumentByHashParams) (GetDocumentByHashRow, error)
 	GetDocumentByIDAndOwner(ctx context.Context, arg GetDocumentByIDAndOwnerParams) (GetDocumentByIDAndOwnerRow, error)
 	GetDocumentBytes(ctx context.Context, id uuid.UUID) (Document, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	LeaseIndexingJobs(ctx context.Context, arg LeaseIndexingJobsParams) ([]IndexingJob, error)
 	ListDocumentsByOwner(ctx context.Context, ownerUserID uuid.UUID) ([]ListDocumentsByOwnerRow, error)
 	MarkDocumentDeleted(ctx context.Context, arg MarkDocumentDeletedParams) error
 	MarkDocumentStatus(ctx context.Context, arg MarkDocumentStatusParams) (MarkDocumentStatusRow, error)
+	MarkIndexingJobFailed(ctx context.Context, arg MarkIndexingJobFailedParams) (IndexingJob, error)
+	MarkIndexingJobRunning(ctx context.Context, arg MarkIndexingJobRunningParams) (IndexingJob, error)
+	MarkIndexingJobSucceeded(ctx context.Context, id uuid.UUID) (IndexingJob, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -171,6 +171,48 @@ func (q *Queries) DeleteChunksByDocument(ctx context.Context, documentID uuid.UU
 	return err
 }
 
+const getChunkByVectorID = `-- name: GetChunkByVectorID :one
+SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_count, c.metadata, c.created_at,
+       d.filename
+FROM chunks c
+JOIN documents d ON d.id = c.document_id
+WHERE c.document_id = $1 AND c.chunk_index = $2
+`
+
+type GetChunkByVectorIDParams struct {
+	DocumentID uuid.UUID `json:"document_id"`
+	ChunkIndex int32     `json:"chunk_index"`
+}
+
+type GetChunkByVectorIDRow struct {
+	ID         uuid.UUID          `json:"id"`
+	DocumentID uuid.UUID          `json:"document_id"`
+	ChunkIndex int32              `json:"chunk_index"`
+	Content    string             `json:"content"`
+	PageNumber pgtype.Int4        `json:"page_number"`
+	TokenCount int32              `json:"token_count"`
+	Metadata   []byte             `json:"metadata"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	Filename   string             `json:"filename"`
+}
+
+func (q *Queries) GetChunkByVectorID(ctx context.Context, arg GetChunkByVectorIDParams) (GetChunkByVectorIDRow, error) {
+	row := q.db.QueryRow(ctx, getChunkByVectorID, arg.DocumentID, arg.ChunkIndex)
+	var i GetChunkByVectorIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.DocumentID,
+		&i.ChunkIndex,
+		&i.Content,
+		&i.PageNumber,
+		&i.TokenCount,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.Filename,
+	)
+	return i, err
+}
+
 const getDocumentByHash = `-- name: GetDocumentByHash :one
 SELECT id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at
 FROM documents

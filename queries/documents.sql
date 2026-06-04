@@ -39,6 +39,13 @@ SET status = $2, error_message = $3, updated_at = now()
 WHERE id = $1
 RETURNING id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at;
 
+-- name: GetChunkByVectorID :one
+SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_count, c.metadata, c.created_at,
+       d.filename
+FROM chunks c
+JOIN documents d ON d.id = c.document_id
+WHERE c.document_id = $1 AND c.chunk_index = $2;
+
 -- name: MarkDocumentDeleted :exec
 UPDATE documents
 SET status = 'deleted', updated_at = now()
@@ -62,4 +69,3 @@ WHERE document_id = $1;
 SELECT count(*)
 FROM chunks
 WHERE document_id = $1;
-

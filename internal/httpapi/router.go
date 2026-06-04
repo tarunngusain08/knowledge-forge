@@ -11,6 +11,7 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/auth"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
+	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
 type Dependencies struct {
@@ -18,12 +19,14 @@ type Dependencies struct {
 	Logger    *slog.Logger
 	Auth      *auth.Service
 	Documents *documents.Service
+	Worker    *worker.Service
 }
 
 func NewRouter(deps Dependencies) http.Handler {
 	server := &Server{
 		auth:           deps.Auth,
 		documents:      deps.Documents,
+		worker:         deps.Worker,
 		maxUploadBytes: deps.Config.MaxUploadBytes,
 	}
 	r := chi.NewRouter()
@@ -52,6 +55,9 @@ func NewRouter(deps Dependencies) http.Handler {
 			}
 		})
 	}
+	if deps.Worker != nil {
+		r.Post("/internal/jobs/{job_id}/process", server.handleProcessJob)
+	}
 
 	return r
 }
@@ -59,6 +65,7 @@ func NewRouter(deps Dependencies) http.Handler {
 type Server struct {
 	auth           *auth.Service
 	documents      *documents.Service
+	worker         *worker.Service
 	maxUploadBytes int64
 }
 

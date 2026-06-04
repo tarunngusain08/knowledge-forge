@@ -17,6 +17,8 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
 	"github.com/tarunngusain08/RAG-bot/internal/httpapi"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
+	"github.com/tarunngusain08/RAG-bot/internal/providers"
+	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
 func main() {
@@ -60,12 +62,26 @@ func main() {
 		os.Exit(1)
 	}
 	documentService := documents.NewService(db.New(pool), documents.NoopVirusScanner{}, cfg.MaxUploadBytes)
+	indexingProviders, err := providers.NewIndexingProviders(ctx, cfg)
+	if err != nil {
+		logger.Error("init indexing providers", "error", err)
+		os.Exit(1)
+	}
+	workerService := worker.NewService(
+		db.New(pool),
+		indexingProviders.Chunker,
+		indexingProviders.Embedder,
+		indexingProviders.Vector,
+		logger,
+		cfg.WorkerName,
+	)
 
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Config:    cfg,
 		Logger:    logger,
 		Auth:      authService,
 		Documents: documentService,
+		Worker:    workerService,
 	})
 
 	server := &http.Server{
