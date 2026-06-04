@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tarunngusain08/RAG-bot/internal/auth"
+	"github.com/tarunngusain08/RAG-bot/internal/chat"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/database"
 	"github.com/tarunngusain08/RAG-bot/internal/db"
@@ -18,6 +19,7 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/httpapi"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
 	"github.com/tarunngusain08/RAG-bot/internal/providers"
+	"github.com/tarunngusain08/RAG-bot/internal/retrieval"
 	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
@@ -75,6 +77,14 @@ func main() {
 		logger,
 		cfg.WorkerName,
 	)
+	queryProviders, err := providers.NewQueryProviders(ctx, cfg)
+	if err != nil {
+		logger.Error("init query providers", "error", err)
+		os.Exit(1)
+	}
+	lexical := retrieval.NewPostgresFTS(db.New(pool))
+	retriever := retrieval.NewService(db.New(pool), queryProviders.Embedder, queryProviders.Vector, lexical, queryProviders.Reranker)
+	chatService := chat.NewService(db.New(pool), queryProviders.LLM, retriever)
 
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Config:    cfg,
@@ -82,6 +92,8 @@ func main() {
 		Auth:      authService,
 		Documents: documentService,
 		Worker:    workerService,
+		Chat:      chatService,
+		Retriever: retriever,
 	})
 
 	server := &http.Server{
