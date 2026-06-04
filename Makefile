@@ -1,7 +1,7 @@
 GO ?= go
 COMPOSE ?= docker compose
 
-.PHONY: test vet tidy run-api run-worker compose-up compose-down sqlc goose-status
+.PHONY: test vet tidy run-api run-worker migrate-up compose-up compose-down sqlc goose-status
 
 test:
 	$(GO) test ./...
@@ -18,6 +18,9 @@ run-api:
 run-worker:
 	$(GO) run ./cmd/worker
 
+migrate-up:
+	$(GO) run ./cmd/migrate up
+
 compose-up:
 	$(COMPOSE) up --build
 
@@ -29,4 +32,3 @@ sqlc:
 
 goose-status:
 	$(GO) run github.com/pressly/goose/v3/cmd/goose@v3.24.3 -dir migrations postgres "$$DATABASE_URL" status
-

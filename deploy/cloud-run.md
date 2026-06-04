@@ -2,6 +2,7 @@
 
 ## Services
 
+- `rag-bot-migrate`: one-shot migration job from `Dockerfile.migrate`
 - `rag-bot-api`: Go API container from `Dockerfile.api`
 - `rag-bot-worker`: Go worker container from `Dockerfile.worker`
 - `rag-bot-ui`: Streamlit UI container from `Dockerfile.ui`
@@ -47,4 +48,3 @@ gcloud run deploy rag-bot-ui \
 In a hardened setup, Cloud Tasks should call
 `POST /internal/jobs/{job_id}/process` using an OIDC token. The endpoint should
 be restricted to service-to-service traffic.
-

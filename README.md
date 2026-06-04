@@ -23,6 +23,7 @@ PostgreSQL FTS Retrieval
 ```bash
 cp .env.example .env
 make tidy
+make migrate-up
 make test
 docker compose up --build
 ```
