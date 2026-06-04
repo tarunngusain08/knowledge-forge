@@ -20,6 +20,10 @@ retrieval observability, and cost accounting. Provider SDKs are hidden behind
 internal interfaces so the core business logic does not depend on Vertex,
 Pinecone, LangChainGo, or Ragas directly.
 
+Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
+exact identifiers, acronyms, filenames, and policy names. Reciprocal Rank Fusion
+combines both candidate sets before reranking.
+
 ## Provider Boundaries
 
 Core business logic depends on interfaces in `internal/rag`:
