@@ -18,6 +18,7 @@ type Querier interface {
 	CreateChunk(ctx context.Context, arg CreateChunkParams) (CreateChunkRow, error)
 	CreateCitation(ctx context.Context, arg CreateCitationParams) (Citation, error)
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (CreateDocumentRow, error)
+	CreateEvalRun(ctx context.Context, arg CreateEvalRunParams) (EvalRun, error)
 	CreateIndexingJob(ctx context.Context, documentID uuid.UUID) (IndexingJob, error)
 	CreateRetrievalTrace(ctx context.Context, arg CreateRetrievalTraceParams) (RetrievalTrace, error)
 	CreateTokenCostEvent(ctx context.Context, arg CreateTokenCostEventParams) (TokenCostEvent, error)
@@ -28,6 +29,7 @@ type Querier interface {
 	GetDocumentByHash(ctx context.Context, arg GetDocumentByHashParams) (GetDocumentByHashRow, error)
 	GetDocumentByIDAndOwner(ctx context.Context, arg GetDocumentByIDAndOwnerParams) (GetDocumentByIDAndOwnerRow, error)
 	GetDocumentBytes(ctx context.Context, id uuid.UUID) (Document, error)
+	GetEvalRun(ctx context.Context, arg GetEvalRunParams) (EvalRun, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	LeaseIndexingJobs(ctx context.Context, arg LeaseIndexingJobsParams) ([]IndexingJob, error)
@@ -39,6 +41,7 @@ type Querier interface {
 	MarkIndexingJobRunning(ctx context.Context, arg MarkIndexingJobRunningParams) (IndexingJob, error)
 	MarkIndexingJobSucceeded(ctx context.Context, id uuid.UUID) (IndexingJob, error)
 	SearchChunksFTS(ctx context.Context, arg SearchChunksFTSParams) ([]SearchChunksFTSRow, error)
+	UpdateEvalRun(ctx context.Context, arg UpdateEvalRunParams) (EvalRun, error)
 }
 
 var _ Querier = (*Queries)(nil)
