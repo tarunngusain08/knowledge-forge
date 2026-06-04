@@ -6,9 +6,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/tarunngusain08/RAG-bot/internal/config"
+	"github.com/tarunngusain08/RAG-bot/internal/database"
+	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/observability"
+	"github.com/tarunngusain08/RAG-bot/internal/providers"
+	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
 
 func main() {
@@ -22,7 +27,55 @@ func main() {
 	}
 
 	logger := observability.NewLogger(cfg.LogLevel)
-	logger.Info("worker bootstrapped", "service", cfg.ServiceName)
-	<-ctx.Done()
-	logger.Info("worker stopped")
+	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("connect database", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	indexingProviders, err := providers.NewIndexingProviders(ctx, cfg)
+	if err != nil {
+		logger.Error("init indexing providers", "error", err)
+		os.Exit(1)
+	}
+	service := worker.NewService(
+		db.New(pool),
+		indexingProviders.Chunker,
+		indexingProviders.Embedder,
+		indexingProviders.Vector,
+		logger,
+		cfg.WorkerName,
+	)
+
+	logger.Info("worker started", "service", cfg.ServiceName, "name", cfg.WorkerName)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		if err := processBatch(ctx, service, int32(cfg.WorkerBatchSize), logger); err != nil {
+			logger.Error("process indexing batch", "error", err)
+		}
+		select {
+		case <-ctx.Done():
+			logger.Info("worker stopped")
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func processBatch(ctx context.Context, service *worker.Service, batchSize int32, logger *slog.Logger) error {
+	jobs, err := service.Lease(ctx, batchSize)
+	if err != nil {
+		return err
+	}
+	for _, job := range jobs {
+		if err := service.ProcessJob(ctx, job.ID); err != nil {
+			logger.Error("process job", "job_id", job.ID, "document_id", job.DocumentID, "error", err)
+			continue
+		}
+		logger.Info("processed job", "job_id", job.ID, "document_id", job.DocumentID)
+	}
+	return nil
 }

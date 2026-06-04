@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgres://ragbot:ragbot@postgres:5432/ragbot?sslmode=disable
       JWT_SECRET: local-dev-secret
       SERVICE_NAME: rag-bot-worker
+      PROVIDER_MODE: mock
     depends_on:
       postgres:
         condition: service_healthy
