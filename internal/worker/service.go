@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
@@ -56,6 +58,9 @@ func (s *Service) Lease(ctx context.Context, limit int32) ([]db.IndexingJob, err
 }
 
 func (s *Service) ProcessJob(ctx context.Context, jobID uuid.UUID) error {
+	ctx, span := otel.Tracer("rag-bot/worker").Start(ctx, "worker.process_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("job.id", jobID.String()))
 	job, err := s.store.MarkIndexingJobRunning(ctx, db.MarkIndexingJobRunningParams{
 		ID:       jobID,
 		LockedBy: pgtype.Text{String: s.workerName, Valid: true},

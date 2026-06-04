@@ -20,6 +20,7 @@ type Querier interface {
 	CreateDocument(ctx context.Context, arg CreateDocumentParams) (CreateDocumentRow, error)
 	CreateIndexingJob(ctx context.Context, documentID uuid.UUID) (IndexingJob, error)
 	CreateRetrievalTrace(ctx context.Context, arg CreateRetrievalTraceParams) (RetrievalTrace, error)
+	CreateTokenCostEvent(ctx context.Context, arg CreateTokenCostEventParams) (TokenCostEvent, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteChunksByDocument(ctx context.Context, documentID uuid.UUID) error
 	GetChatSession(ctx context.Context, arg GetChatSessionParams) (ChatSession, error)
