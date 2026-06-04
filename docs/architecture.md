@@ -15,6 +15,20 @@ flowchart LR
   G --> C[Answer + Citations]
 ```
 
+```mermaid
+flowchart TB
+  API[Cloud Run API] --> SQL[(Cloud SQL PostgreSQL)]
+  API --> PC[Pinecone]
+  API --> VX[Vertex AI]
+  UI[Cloud Run Streamlit UI] --> API
+  TASKS[Cloud Tasks] --> API
+  WORKER[Cloud Run Worker] --> SQL
+  WORKER --> PC
+  WORKER --> VX
+  TRACE[Cloud Trace] -. OpenTelemetry .- API
+  TRACE -. OpenTelemetry .- WORKER
+```
+
 The Go service owns API, orchestration, auth, persistence, worker coordination,
 retrieval observability, and cost accounting. Provider SDKs are hidden behind
 internal interfaces so the core business logic does not depend on Vertex,

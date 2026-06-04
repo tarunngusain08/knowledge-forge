@@ -9,3 +9,4 @@ The target production deployment is Google Cloud Run with:
 
 Detailed deployment manifests and commands are added in the deployment milestone.
 
+See [Cloud Run Deployment](cloud-run.md).
