@@ -20,3 +20,17 @@ retrieval observability, and cost accounting. Provider SDKs are hidden behind
 internal interfaces so the core business logic does not depend on Vertex,
 Pinecone, LangChainGo, or Ragas directly.
 
+## Provider Boundaries
+
+Core business logic depends on interfaces in `internal/rag`:
+
+- `LLMProvider`
+- `EmbeddingProvider`
+- `VectorStoreProvider`
+- `RerankerProvider`
+- `LexicalSearchProvider`
+- `ChunkingProvider`
+- `Retriever`
+
+Implementations live under `internal/providers`. LangChainGo is currently used
+only by the chunking adapter.
