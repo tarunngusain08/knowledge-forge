@@ -31,4 +31,3 @@ func Init(ctx context.Context, serviceName, environment string) (ShutdownFunc, e
 
 	return provider.Shutdown, nil
 }
-

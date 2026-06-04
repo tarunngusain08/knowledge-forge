@@ -25,4 +25,3 @@ func NewLogger(level string) *slog.Logger {
 	slog.SetDefault(logger)
 	return logger
 }
-
