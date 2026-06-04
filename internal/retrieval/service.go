@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/rag"
@@ -31,6 +33,8 @@ func NewService(store ChunkStore, embedder rag.EmbeddingProvider, vector rag.Vec
 
 func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.RetrievalResult, error) {
 	start := time.Now()
+	ctx, span := otel.Tracer("rag-bot/retrieval").Start(ctx, "retrieval.retrieve")
+	defer span.End()
 	topK := req.TopK
 	if topK <= 0 {
 		topK = 5
@@ -53,6 +57,12 @@ func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.R
 	if err != nil {
 		return rag.RetrievalResult{}, fmt.Errorf("lexical search: %w", err)
 	}
+	span.SetAttributes(
+		attribute.Int("rag.dense_hits", len(hydratedDense)),
+		attribute.Int("rag.lexical_hits", len(lexicalHits)),
+		attribute.Int("rag.top_k", topK),
+		attribute.Bool("rag.reranker_enabled", req.RerankerEnabled),
+	)
 	fused := ReciprocalRankFusion(hydratedDense, lexicalHits, candidateK)
 	reranked := fused
 	if req.RerankerEnabled && s.reranker != nil && len(fused) > 0 {

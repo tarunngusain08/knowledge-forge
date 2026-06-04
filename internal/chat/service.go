@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/tarunngusain08/RAG-bot/internal/costs"
 	"github.com/tarunngusain08/RAG-bot/internal/db"
 	"github.com/tarunngusain08/RAG-bot/internal/rag"
 )
@@ -20,6 +22,7 @@ type Store interface {
 	CreateChatMessage(ctx context.Context, arg db.CreateChatMessageParams) (db.ChatMessage, error)
 	CreateCitation(ctx context.Context, arg db.CreateCitationParams) (db.Citation, error)
 	CreateRetrievalTrace(ctx context.Context, arg db.CreateRetrievalTraceParams) (db.RetrievalTrace, error)
+	CreateTokenCostEvent(ctx context.Context, arg db.CreateTokenCostEventParams) (db.TokenCostEvent, error)
 }
 
 type Service struct {
@@ -117,6 +120,23 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 	for _, citation := range generation.Citations {
 		_, _ = s.store.CreateCitation(ctx, citationParams(assistantMsg.ID, citation))
 	}
+	cost := costs.EstimateUSD(costs.Usage{
+		Provider:     "vertex",
+		Model:        generation.Model,
+		Operation:    "generate",
+		InputTokens:  generation.InputTokens,
+		OutputTokens: generation.OutputTokens,
+	})
+	_, _ = s.store.CreateTokenCostEvent(ctx, db.CreateTokenCostEventParams{
+		UserID:           nullableUUID(req.UserID),
+		ChatSessionID:    nullableUUID(req.SessionID),
+		Provider:         "vertex",
+		Model:            generation.Model,
+		Operation:        "generate",
+		InputTokens:      int32(generation.InputTokens),
+		OutputTokens:     int32(generation.OutputTokens),
+		EstimatedCostUsd: strconv.FormatFloat(cost, 'f', 6, 64),
+	})
 	_, _ = s.store.CreateRetrievalTrace(ctx, traceParams(req, rewritten, retrieval, generation))
 	return AskResponse{
 		UserMessage:      userMsg,

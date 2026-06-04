@@ -12,6 +12,7 @@ import (
 	"github.com/tarunngusain08/RAG-bot/internal/chat"
 	"github.com/tarunngusain08/RAG-bot/internal/config"
 	"github.com/tarunngusain08/RAG-bot/internal/documents"
+	"github.com/tarunngusain08/RAG-bot/internal/observability"
 	"github.com/tarunngusain08/RAG-bot/internal/rag"
 	"github.com/tarunngusain08/RAG-bot/internal/worker"
 )
@@ -40,6 +41,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(observability.HTTPMiddleware(deps.Logger))
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{
