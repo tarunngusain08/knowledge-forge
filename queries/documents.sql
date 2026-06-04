@@ -46,6 +46,17 @@ FROM chunks c
 JOIN documents d ON d.id = c.document_id
 WHERE c.document_id = $1 AND c.chunk_index = $2;
 
+-- name: SearchChunksFTS :many
+SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_count, c.metadata, c.created_at,
+       d.filename,
+       ts_rank_cd(c.search_vector, websearch_to_tsquery('english', $1))::float8 AS lexical_score
+FROM chunks c
+JOIN documents d ON d.id = c.document_id
+WHERE d.status = 'indexed'
+  AND c.search_vector @@ websearch_to_tsquery('english', $1)
+ORDER BY lexical_score DESC, c.created_at DESC
+LIMIT $2;
+
 -- name: MarkDocumentDeleted :exec
 UPDATE documents
 SET status = 'deleted', updated_at = now()

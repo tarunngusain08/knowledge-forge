@@ -432,3 +432,64 @@ func (q *Queries) MarkDocumentStatus(ctx context.Context, arg MarkDocumentStatus
 	)
 	return i, err
 }
+
+const searchChunksFTS = `-- name: SearchChunksFTS :many
+SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_count, c.metadata, c.created_at,
+       d.filename,
+       ts_rank_cd(c.search_vector, websearch_to_tsquery('english', $1))::float8 AS lexical_score
+FROM chunks c
+JOIN documents d ON d.id = c.document_id
+WHERE d.status = 'indexed'
+  AND c.search_vector @@ websearch_to_tsquery('english', $1)
+ORDER BY lexical_score DESC, c.created_at DESC
+LIMIT $2
+`
+
+type SearchChunksFTSParams struct {
+	WebsearchToTsquery string `json:"websearch_to_tsquery"`
+	Limit              int32  `json:"limit"`
+}
+
+type SearchChunksFTSRow struct {
+	ID           uuid.UUID          `json:"id"`
+	DocumentID   uuid.UUID          `json:"document_id"`
+	ChunkIndex   int32              `json:"chunk_index"`
+	Content      string             `json:"content"`
+	PageNumber   pgtype.Int4        `json:"page_number"`
+	TokenCount   int32              `json:"token_count"`
+	Metadata     []byte             `json:"metadata"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Filename     string             `json:"filename"`
+	LexicalScore float64            `json:"lexical_score"`
+}
+
+func (q *Queries) SearchChunksFTS(ctx context.Context, arg SearchChunksFTSParams) ([]SearchChunksFTSRow, error) {
+	rows, err := q.db.Query(ctx, searchChunksFTS, arg.WebsearchToTsquery, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchChunksFTSRow
+	for rows.Next() {
+		var i SearchChunksFTSRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.DocumentID,
+			&i.ChunkIndex,
+			&i.Content,
+			&i.PageNumber,
+			&i.TokenCount,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.Filename,
+			&i.LexicalScore,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

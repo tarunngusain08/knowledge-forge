@@ -31,6 +31,7 @@ type Querier interface {
 	MarkIndexingJobFailed(ctx context.Context, arg MarkIndexingJobFailedParams) (IndexingJob, error)
 	MarkIndexingJobRunning(ctx context.Context, arg MarkIndexingJobRunningParams) (IndexingJob, error)
 	MarkIndexingJobSucceeded(ctx context.Context, id uuid.UUID) (IndexingJob, error)
+	SearchChunksFTS(ctx context.Context, arg SearchChunksFTSParams) ([]SearchChunksFTSRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
