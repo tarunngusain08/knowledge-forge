@@ -44,5 +44,16 @@ services:
       postgres:
         condition: service_healthy
 
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    environment:
+      API_BASE_URL: http://api:8080
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
 volumes:
   postgres-data:
