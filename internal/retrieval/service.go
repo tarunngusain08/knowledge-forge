@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/tarunngusain08/RAG-bot/internal/db"
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 type ChunkStore interface {
@@ -33,7 +33,7 @@ func NewService(store ChunkStore, embedder rag.EmbeddingProvider, vector rag.Vec
 
 func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.RetrievalResult, error) {
 	start := time.Now()
-	ctx, span := otel.Tracer("rag-bot/retrieval").Start(ctx, "retrieval.retrieve")
+	ctx, span := otel.Tracer("knowledge-forge/retrieval").Start(ctx, "retrieval.retrieve")
 	defer span.End()
 	topK := req.TopK
 	if topK <= 0 {

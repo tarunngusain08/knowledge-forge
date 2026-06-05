@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/tarunngusain08/RAG-bot/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
 )
 
 type User struct {

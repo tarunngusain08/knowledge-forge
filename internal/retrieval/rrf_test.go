@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 func TestReciprocalRankFusionMergesDenseAndLexical(t *testing.T) {

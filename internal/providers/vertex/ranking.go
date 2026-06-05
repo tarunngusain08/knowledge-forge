@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2/google"
 
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 type Ranker struct {

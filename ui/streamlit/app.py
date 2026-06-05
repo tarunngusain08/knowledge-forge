@@ -131,8 +131,8 @@ def eval_tab(token: str) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="RAG-bot", layout="wide")
-    st.title("RAG-bot")
+    st.set_page_config(page_title="Knowledge Forge", layout="wide")
+    st.title("Knowledge Forge")
     token = st.session_state.get("token")
     if not token:
         login()

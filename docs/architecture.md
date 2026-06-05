@@ -1,6 +1,6 @@
-# RAG-bot Architecture
+# Knowledge Forge Architecture
 
-RAG-bot is a production-style company-document question answering system.
+Knowledge Forge is a production-style company-document question answering system.
 
 ```mermaid
 flowchart LR

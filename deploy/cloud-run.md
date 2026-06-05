@@ -2,10 +2,10 @@
 
 ## Services
 
-- `rag-bot-migrate`: one-shot migration job from `Dockerfile.migrate`
-- `rag-bot-api`: Go API container from `Dockerfile.api`
-- `rag-bot-worker`: Go worker container from `Dockerfile.worker`
-- `rag-bot-ui`: Streamlit UI container from `Dockerfile.ui`
+- `knowledge-forge-migrate`: one-shot migration job from `Dockerfile.migrate`
+- `knowledge-forge-api`: Go API container from `Dockerfile.api`
+- `knowledge-forge-worker`: Go worker container from `Dockerfile.worker`
+- `knowledge-forge-ui`: Streamlit UI container from `Dockerfile.ui`
 
 ## Managed Dependencies
 
@@ -28,21 +28,21 @@
 ## Deployment Sketch
 
 ```bash
-gcloud run deploy rag-bot-api \
+gcloud run deploy knowledge-forge-api \
   --source . \
   --region us-central1 \
   --set-env-vars PROVIDER_MODE=cloud \
   --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest
 
-gcloud run deploy rag-bot-worker \
+gcloud run deploy knowledge-forge-worker \
   --source . \
   --region us-central1 \
-  --set-env-vars SERVICE_NAME=rag-bot-worker,PROVIDER_MODE=cloud
+  --set-env-vars SERVICE_NAME=knowledge-forge-worker,PROVIDER_MODE=cloud
 
-gcloud run deploy rag-bot-ui \
+gcloud run deploy knowledge-forge-ui \
   --source . \
   --region us-central1 \
-  --set-env-vars API_BASE_URL=https://rag-bot-api-url
+  --set-env-vars API_BASE_URL=https://knowledge-forge-api-url
 ```
 
 In a hardened setup, Cloud Tasks should call

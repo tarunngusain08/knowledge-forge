@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/tarunngusain08/RAG-bot/internal/auth"
+	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 )
 
 type loginRequest struct {

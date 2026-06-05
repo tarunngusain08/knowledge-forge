@@ -3,8 +3,8 @@ package retrieval
 import (
 	"context"
 
-	"github.com/tarunngusain08/RAG-bot/internal/db"
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 type FTSStore interface {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/tarunngusain08/RAG-bot/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
 )
 
 func TestLoginIssuesToken(t *testing.T) {

@@ -3,7 +3,7 @@ package retrieval
 import (
 	"sort"
 
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 const rrfK = 60.0

@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/tarunngusain08/RAG-bot/internal/auth"
-	"github.com/tarunngusain08/RAG-bot/internal/evaluation"
+	"github.com/tarunngusain08/knowledge-forge/internal/auth"
+	"github.com/tarunngusain08/knowledge-forge/internal/evaluation"
 )
 
 type evalRunRequest struct {

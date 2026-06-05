@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tarunngusain08/RAG-bot/internal/config"
-	"github.com/tarunngusain08/RAG-bot/internal/database"
-	"github.com/tarunngusain08/RAG-bot/internal/db"
-	"github.com/tarunngusain08/RAG-bot/internal/observability"
-	"github.com/tarunngusain08/RAG-bot/internal/providers"
-	"github.com/tarunngusain08/RAG-bot/internal/worker"
+	"github.com/tarunngusain08/knowledge-forge/internal/config"
+	"github.com/tarunngusain08/knowledge-forge/internal/database"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/observability"
+	"github.com/tarunngusain08/knowledge-forge/internal/providers"
+	"github.com/tarunngusain08/knowledge-forge/internal/worker"
 )
 
 func main() {

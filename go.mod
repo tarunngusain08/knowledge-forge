@@ -1,4 +1,4 @@
-module github.com/tarunngusain08/RAG-bot
+module github.com/tarunngusain08/knowledge-forge
 
 go 1.25.1
 

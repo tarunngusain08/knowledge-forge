@@ -8,14 +8,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/tarunngusain08/RAG-bot/internal/auth"
-	"github.com/tarunngusain08/RAG-bot/internal/chat"
-	"github.com/tarunngusain08/RAG-bot/internal/config"
-	"github.com/tarunngusain08/RAG-bot/internal/documents"
-	"github.com/tarunngusain08/RAG-bot/internal/evaluation"
-	"github.com/tarunngusain08/RAG-bot/internal/observability"
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
-	"github.com/tarunngusain08/RAG-bot/internal/worker"
+	"github.com/tarunngusain08/knowledge-forge/internal/auth"
+	"github.com/tarunngusain08/knowledge-forge/internal/chat"
+	"github.com/tarunngusain08/knowledge-forge/internal/config"
+	"github.com/tarunngusain08/knowledge-forge/internal/documents"
+	"github.com/tarunngusain08/knowledge-forge/internal/evaluation"
+	"github.com/tarunngusain08/knowledge-forge/internal/observability"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/worker"
 )
 
 type Dependencies struct {

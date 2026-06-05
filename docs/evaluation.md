@@ -1,6 +1,6 @@
 # Evaluation Methodology
 
-RAG-bot evaluates retrieval and generation separately.
+Knowledge Forge evaluates retrieval and generation separately.
 
 ## Retrieval Metrics
 
