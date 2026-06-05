@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/tarunngusain08/RAG-bot/internal/costs"
-	"github.com/tarunngusain08/RAG-bot/internal/db"
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/costs"
+	"github.com/tarunngusain08/knowledge-forge/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 type Store interface {

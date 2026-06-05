@@ -34,7 +34,7 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		ServiceName:           getenv("SERVICE_NAME", "rag-bot-api"),
+		ServiceName:           getenv("SERVICE_NAME", "knowledge-forge-api"),
 		Environment:           getenv("ENVIRONMENT", "local"),
 		HTTPPort:              getenv("HTTP_PORT", "8080"),
 		LogLevel:              getenv("LOG_LEVEL", "info"),
@@ -52,7 +52,7 @@ func Load() (Config, error) {
 		PineconeAPIKey:        os.Getenv("PINECONE_API_KEY"),
 		PineconeHost:          os.Getenv("PINECONE_HOST"),
 		PineconeNamespace:     getenv("PINECONE_NAMESPACE", "default"),
-		WorkerName:            getenv("WORKER_NAME", "rag-bot-worker"),
+		WorkerName:            getenv("WORKER_NAME", "knowledge-forge-worker"),
 		WorkerBatchSize:       getInt64("WORKER_BATCH_SIZE", 2),
 		ShutdownTimeout:       getDuration("SHUTDOWN_TIMEOUT", 10*time.Second),
 		MaxUploadBytes:        getInt64("MAX_UPLOAD_BYTES", 20*1024*1024),

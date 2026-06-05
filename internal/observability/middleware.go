@@ -10,7 +10,7 @@ import (
 )
 
 func HTTPMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
-	tracer := otel.Tracer("rag-bot/http")
+	tracer := otel.Tracer("knowledge-forge/http")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()

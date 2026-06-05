@@ -16,7 +16,7 @@ def load_jsonl(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run Ragas metrics for RAG-bot JSONL outputs.")
+    parser = argparse.ArgumentParser(description="Run Ragas metrics for Knowledge Forge JSONL outputs.")
     parser.add_argument("--input", required=True, help="JSONL file with question, answer, contexts, ground_truth")
     parser.add_argument("--output", required=True, help="Output JSON metrics file")
     args = parser.parse_args()

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tarunngusain08/RAG-bot/internal/config"
-	"github.com/tarunngusain08/RAG-bot/internal/providers/langchain"
-	"github.com/tarunngusain08/RAG-bot/internal/providers/mock"
-	"github.com/tarunngusain08/RAG-bot/internal/providers/pinecone"
-	"github.com/tarunngusain08/RAG-bot/internal/providers/vertex"
-	"github.com/tarunngusain08/RAG-bot/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/config"
+	"github.com/tarunngusain08/knowledge-forge/internal/providers/langchain"
+	"github.com/tarunngusain08/knowledge-forge/internal/providers/mock"
+	"github.com/tarunngusain08/knowledge-forge/internal/providers/pinecone"
+	"github.com/tarunngusain08/knowledge-forge/internal/providers/vertex"
+	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 type IndexingProviders struct {

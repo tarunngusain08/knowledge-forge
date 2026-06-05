@@ -1,4 +1,4 @@
-# RAG-bot
+# Knowledge Forge
 
 Production-style company-document RAG assistant built with Go, PostgreSQL,
 Pinecone, Vertex AI, and LangChainGo behind internal provider interfaces.
