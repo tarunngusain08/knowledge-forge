@@ -59,6 +59,12 @@ python3 -m py_compile ui/streamlit/app.py
 
 ## Documentation
 
+- [Docs Index](docs/README.md)
+- [FR, NFR, and Scale Estimation](docs/01-fr-nfr-scale-estimation.md)
+- [HLD and Component Design](docs/02-hld-component-design.md)
+- [Use Cases and Sequence Diagrams](docs/03-usecases-sequence-diagrams.md)
+- [LLD](docs/04-lld.md)
+- [DB Design and Schema](docs/05-db-design-schema.md)
 - [Architecture](docs/architecture.md)
 - [Implementation Plan](docs/implementation-plan.md)
 - [Deployment](deploy/README.md)
