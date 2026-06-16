@@ -18,20 +18,65 @@ type RequestOptions = {
   method?: string;
 };
 
+export class ApiError extends Error {
+  status: number;
+  path: string;
+
+  constructor(message: string, status: number, path: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.path = path;
+  }
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
+  };
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
-    },
+    headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body)
   });
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed with status ${response.status}`);
+    throw new ApiError(await errorMessage(response), response.status, path);
   }
-  return response.json() as Promise<T>;
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
+}
+
+async function errorMessage(response: Response): Promise<string> {
+  const fallback = `Request failed with status ${response.status}`;
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (!text.trim()) {
+    return fallback;
+  }
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = JSON.parse(text) as { error?: unknown; message?: unknown };
+      if (typeof payload.error === "string" && payload.error.trim()) {
+        return payload.error;
+      }
+      if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.message;
+      }
+    } catch {
+      return fallback;
+    }
+  }
+  return text;
 }
 
 export function login(email: string, password: string): Promise<LoginResponse> {
