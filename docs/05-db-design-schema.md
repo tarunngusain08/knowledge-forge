@@ -38,6 +38,7 @@ erDiagram
   repositories ||--o{ repository_ingestion_jobs : indexed_by
   repositories ||--o{ git_commits : records
   repositories ||--o{ repo_retrieval_traces : traces
+  repo_retrieval_traces ||--o{ repo_feedback : reviewed_by
   repo_snapshots ||--o{ repo_file_versions : contains
   repo_snapshots ||--o{ repo_file_chunks : chunked_into
   repo_snapshots ||--o{ repo_symbols : defines
@@ -205,6 +206,19 @@ erDiagram
     text rewritten_query
     jsonb dense_hits
     jsonb reranked_hits
+  }
+
+  repo_feedback {
+    uuid id PK
+    uuid trace_id FK
+    uuid user_id FK
+    boolean answer_correct
+    boolean citation_correct
+    boolean missing_file
+    boolean missing_symbol
+    boolean hallucinated_claim
+    boolean should_have_refused
+    text reviewer_note
   }
 ```
 

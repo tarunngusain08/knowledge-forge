@@ -67,7 +67,7 @@ flowchart TB
   API[Cloud Run API] --> SQL[(Cloud SQL PostgreSQL)]
   API --> PC[Pinecone]
   API --> VX[Vertex AI]
-  UI[Cloud Run Streamlit UI] --> API
+  UI[Cloud Run React UI] --> API
   TASKS[Cloud Tasks] --> API
   WORKER[Cloud Run Worker] --> SQL
   WORKER --> PC
@@ -80,6 +80,11 @@ The Go service owns API, orchestration, auth, persistence, worker coordination,
 retrieval observability, and cost accounting. Provider SDKs are hidden behind
 internal interfaces so the core business logic does not depend on Vertex,
 Pinecone, LangChainGo, or Ragas directly.
+
+The primary UI is a React/Vite product surface focused on the North-Star
+workflow. It keeps repository import, question, evidence, plan outline, impact
+outline, trace/provenance, and structured feedback in one demo-oriented flow.
+The Streamlit UI remains in `ui/streamlit` as a fallback.
 
 Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
 exact identifiers, acronyms, filenames, and policy names. Reciprocal Rank Fusion

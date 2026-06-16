@@ -94,6 +94,32 @@ type RetrievalTrace struct {
 	CreatedAt          time.Time       `json:"created_at"`
 }
 
+type CreateFeedbackInput struct {
+	UserID             uuid.UUID
+	TraceID            uuid.UUID
+	AnswerCorrect      bool
+	CitationCorrect    bool
+	MissingFile        bool
+	MissingSymbol      bool
+	HallucinatedClaim  bool
+	ShouldHaveRefused bool
+	ReviewerNote      string
+}
+
+type Feedback struct {
+	ID                 uuid.UUID  `json:"id"`
+	TraceID            uuid.UUID  `json:"trace_id"`
+	UserID             *uuid.UUID `json:"user_id,omitempty"`
+	AnswerCorrect      bool       `json:"answer_correct"`
+	CitationCorrect    bool       `json:"citation_correct"`
+	MissingFile        bool       `json:"missing_file"`
+	MissingSymbol      bool       `json:"missing_symbol"`
+	HallucinatedClaim  bool       `json:"hallucinated_claim"`
+	ShouldHaveRefused bool       `json:"should_have_refused"`
+	ReviewerNote      string     `json:"reviewer_note"`
+	CreatedAt         time.Time  `json:"created_at"`
+}
+
 func (s *Store) CreateRepository(ctx context.Context, input CreateRepositoryInput) (codeintel.Repository, error) {
 	if strings.TrimSpace(input.DefaultBranch) == "" {
 		input.DefaultBranch = "main"
@@ -347,6 +373,28 @@ WHERE id = $1
 	trace.UserID = uuidPtr(userID)
 	trace.SnapshotID = uuidPtr(snapshotID)
 	return trace, nil
+}
+
+func (s *Store) CreateFeedback(ctx context.Context, input CreateFeedbackInput) (Feedback, error) {
+	row := s.pool.QueryRow(ctx, `
+INSERT INTO repo_feedback (
+    trace_id, user_id, answer_correct, citation_correct, missing_file, missing_symbol,
+    hallucinated_claim, should_have_refused, reviewer_note
+) VALUES (
+    $1, $2, $3, $4, $5, $6,
+    $7, $8, $9
+)
+RETURNING id, trace_id, user_id, answer_correct, citation_correct, missing_file, missing_symbol,
+          hallucinated_claim, should_have_refused, reviewer_note, created_at
+`, input.TraceID, nullableUUID(input.UserID), input.AnswerCorrect, input.CitationCorrect, input.MissingFile, input.MissingSymbol,
+		input.HallucinatedClaim, input.ShouldHaveRefused, strings.TrimSpace(input.ReviewerNote))
+	var feedback Feedback
+	var userID pgtype.UUID
+	if err := row.Scan(&feedback.ID, &feedback.TraceID, &userID, &feedback.AnswerCorrect, &feedback.CitationCorrect, &feedback.MissingFile, &feedback.MissingSymbol, &feedback.HallucinatedClaim, &feedback.ShouldHaveRefused, &feedback.ReviewerNote, &feedback.CreatedAt); err != nil {
+		return Feedback{}, err
+	}
+	feedback.UserID = uuidPtr(userID)
+	return feedback, nil
 }
 
 func (s *Store) SaveGitCommits(ctx context.Context, repositoryID uuid.UUID, commits []codeintel.GitCommit) error {
