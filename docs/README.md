@@ -7,6 +7,7 @@
 - [Use Cases and Sequence Diagrams](03-usecases-sequence-diagrams.md)
 - [Low-Level Design](04-lld.md)
 - [Database Design and Schema](05-db-design-schema.md)
+- [UI and Backend Quality Guide](06-ui-backend-quality.md)
 
 ## Supporting Docs
 

@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -24,7 +23,10 @@ func (s *Server) handleCreateChatSession(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var req createSessionRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := readOptionalJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
 	session, err := s.chat.CreateSession(r.Context(), user.ID, req.Title)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "create session failed")
@@ -70,7 +72,7 @@ func (s *Server) handleCreateChatMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var req askRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}

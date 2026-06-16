@@ -2,6 +2,9 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -20,6 +23,8 @@ import (
 	"github.com/tarunngusain08/knowledge-forge/internal/repositories"
 	"github.com/tarunngusain08/knowledge-forge/internal/worker"
 )
+
+const maxJSONBodyBytes int64 = 1 << 20
 
 type Dependencies struct {
 	Config            config.Config
@@ -129,13 +134,39 @@ type Server struct {
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
-	if body != nil {
-		_ = json.NewEncoder(w).Encode(body)
+	if body == nil {
+		return
 	}
+	_ = json.NewEncoder(w).Encode(body)
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	return decodeJSON(w, r, dst, false)
+}
+
+func readOptionalJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	return decodeJSON(w, r, dst, true)
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any, allowEmpty bool) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dst); err != nil {
+		if errors.Is(err, io.EOF) && allowEmpty {
+			return nil
+		}
+		return fmt.Errorf("decode JSON body: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return fmt.Errorf("decode JSON body: multiple JSON values are not allowed")
+	}
+	return nil
 }
