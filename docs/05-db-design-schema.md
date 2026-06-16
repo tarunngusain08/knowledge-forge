@@ -192,6 +192,15 @@ erDiagram
     uuid id PK
     uuid repository_id FK
     uuid snapshot_id FK
+    text query_category
+    jsonb retrieval_path
+    jsonb retrieval_config
+    text[] retrieved_chunk_ids
+    jsonb stage_contributions
+    int context_token_count
+    text prompt_version
+    text generation_model
+    float estimated_cost_usd
     text original_query
     text rewritten_query
     jsonb dense_hits

@@ -45,6 +45,10 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 	if topK <= 0 {
 		topK = 8
 	}
+	candidateK := req.CandidateK
+	if candidateK <= 0 {
+		candidateK = topK
+	}
 	query := strings.TrimSpace(req.Query)
 	snapshot, err := s.store.LatestSnapshot(ctx, req.RepositoryID, branch)
 	if err != nil {
@@ -58,7 +62,7 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 		"repository_id": map[string]any{"$eq": req.RepositoryID.String()},
 		"snapshot_id":   map[string]any{"$eq": snapshot.ID.String()},
 	}
-	denseRaw, err := s.vector.Search(ctx, embedding.Vector, topK, filter)
+	denseRaw, err := s.vector.Search(ctx, embedding.Vector, candidateK, filter)
 	if err != nil {
 		return rag.RetrievalResult{}, fmt.Errorf("semantic code search: %w", err)
 	}
@@ -66,11 +70,14 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 	if err != nil {
 		return rag.RetrievalResult{}, err
 	}
+	annotateRepositoryHits(denseHits, branch, snapshot.CommitSHA)
 	span.SetAttributes(
 		attribute.String("repository.id", req.RepositoryID.String()),
 		attribute.String("repository.branch", branch),
 		attribute.String("repository.snapshot", snapshot.ID.String()),
 		attribute.Int("rag.dense_hits", len(denseHits)),
+		attribute.Int("rag.candidate_k", candidateK),
+		attribute.String("rag.query_category", req.QueryCategory),
 		attribute.Bool("rag.reranker_enabled", req.RerankerEnabled),
 	)
 	reranked := denseHits
@@ -81,16 +88,35 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 		}
 	}
 	return rag.RetrievalResult{
-		OriginalQuery:  req.Query,
-		RewrittenQuery: query,
-		RepositoryID:   req.RepositoryID,
-		SnapshotID:     snapshot.ID,
-		BranchName:     branch,
-		DenseHits:      denseHits,
-		FusedHits:      denseHits,
-		RerankedHits:   reranked,
-		Latency:        time.Since(start),
+		OriginalQuery:     req.Query,
+		RewrittenQuery:    query,
+		RepositoryID:      req.RepositoryID,
+		SnapshotID:        snapshot.ID,
+		BranchName:        branch,
+		CommitSHA:         snapshot.CommitSHA,
+		DenseHits:         denseHits,
+		FusedHits:         denseHits,
+		RerankedHits:      reranked,
+		QueryCategory:     req.QueryCategory,
+		RetrievalPath:     req.RetrievalPath,
+		RetrievalConfig:   req.RetrievalConfig,
+		RetrievedChunkIDs: chunkIDs(reranked),
+		StageContributions: map[string]int{
+			"dense":  len(denseHits),
+			"rerank": rerankContribution(req.RerankerEnabled, reranked),
+		},
+		Latency: time.Since(start),
 	}, nil
+}
+
+func annotateRepositoryHits(hits []rag.RetrievalHit, branchName string, commitSHA string) {
+	for i := range hits {
+		if hits[i].Chunk.Metadata == nil {
+			hits[i].Chunk.Metadata = map[string]any{}
+		}
+		hits[i].Chunk.Metadata["branch_name"] = branchName
+		hits[i].Chunk.Metadata["commit_sha"] = commitSHA
+	}
 }
 
 func (s *CodeService) hydrateDense(ctx context.Context, repositoryID uuid.UUID, hits []rag.RetrievalHit) ([]rag.RetrievalHit, error) {
@@ -162,4 +188,21 @@ func ragChunk(chunk codeintel.Chunk) rag.Chunk {
 		TokenCount: chunk.TokenCount,
 		Metadata:   metadata,
 	}
+}
+
+func chunkIDs(hits []rag.RetrievalHit) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(hits))
+	for _, hit := range hits {
+		if hit.Chunk.ID != uuid.Nil {
+			ids = append(ids, hit.Chunk.ID)
+		}
+	}
+	return ids
+}
+
+func rerankContribution(enabled bool, hits []rag.RetrievalHit) int {
+	if !enabled {
+		return 0
+	}
+	return len(hits)
 }

@@ -145,7 +145,7 @@ type repositoryAskRequest struct {
 	BranchName      string    `json:"branch_name"`
 	Question        string    `json:"question"`
 	TopK            int       `json:"top_k"`
-	RerankerEnabled bool      `json:"reranker_enabled"`
+	RerankerEnabled *bool     `json:"reranker_enabled,omitempty"`
 }
 
 func (s *Server) handleRepositoryAsk(w http.ResponseWriter, r *http.Request) {

@@ -116,3 +116,38 @@ Complexity gates:
   10% without increasing latency by more than 25%.
 - Keep reranking only if MRR improves by at least 5% or faithfulness improves
   meaningfully without unacceptable cost.
+
+## Phase 14: Adaptive Retrieval, Context Compression, and Cost Control
+
+Branch: `tgusain/m14-adaptive-retrieval-cost-control`
+
+Implemented scope:
+
+- Query classification for exact lookups, architecture questions,
+  implementation questions, impact questions, and unsupported/unknown prompts.
+- Adaptive retrieval policy with:
+  - final `top_k`
+  - candidate depth
+  - context token budget
+  - retrieval path
+  - reranker gating and skip reason
+- Repository dense retrieval now honors candidate depth separately from final
+  answer context size.
+- Context assembly collapses adjacent chunks from the same file and enforces a
+  token budget before Gemini receives context.
+- Repository Q&A defaults to adaptive reranker behavior when the API caller
+  omits `reranker_enabled`; explicit `false` still disables reranking.
+- Repository retrieval traces now persist query category, retrieval path,
+  retrieval config, retrieved chunk IDs, stage contributions, context token
+  count, prompt version, generation model, and estimated answer cost.
+- Repository Q&A responses include a `provenance` object so demos can explain
+  why a retrieval path was chosen and what evidence entered the prompt.
+
+Tradeoffs:
+
+- Phase 14 does not introduce graph retrieval, symbol retrieval, or answer
+  caching. Those remain gated by Phase 13 benchmark evidence.
+- Cost control is implemented at the retrieval/generation boundary through
+  candidate depth, reranker gating, context token budget, and persisted cost
+  analytics. Hard per-user and per-repository budget enforcement can be added
+  after usage data exists.
