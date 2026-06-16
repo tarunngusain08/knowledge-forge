@@ -1,4 +1,12 @@
-import type { AskResponse, FeedbackPayload, IngestionJob, LoginResponse, Repository } from "./types";
+import type {
+  AskResponse,
+  FeedbackPayload,
+  ImpactAnalysisResponse,
+  ImplementationPlanResponse,
+  IngestionJob,
+  LoginResponse,
+  Repository
+} from "./types";
 
 const defaultBaseUrl = "http://localhost:8080";
 
@@ -55,6 +63,26 @@ export function askRepository(token: string, input: {
   reranker_enabled?: boolean;
 }): Promise<AskResponse> {
   return request<AskResponse>("/v1/ask", { method: "POST", token, body: input });
+}
+
+export function generatePlan(token: string, input: {
+  repository_id: string;
+  branch_name: string;
+  request: string;
+  top_k: number;
+  reranker_enabled?: boolean;
+}): Promise<ImplementationPlanResponse> {
+  return request<ImplementationPlanResponse>("/v1/plans", { method: "POST", token, body: input });
+}
+
+export function analyzeImpact(token: string, input: {
+  repository_id: string;
+  branch_name: string;
+  request: string;
+  top_k: number;
+  reranker_enabled?: boolean;
+}): Promise<ImpactAnalysisResponse> {
+  return request<ImpactAnalysisResponse>("/v1/impact", { method: "POST", token, body: input });
 }
 
 export function getTrace(token: string, traceId: string): Promise<unknown> {

@@ -148,6 +148,14 @@ type repositoryAskRequest struct {
 	RerankerEnabled *bool     `json:"reranker_enabled,omitempty"`
 }
 
+type repositoryWorkflowRequest struct {
+	RepositoryID    uuid.UUID `json:"repository_id"`
+	BranchName      string    `json:"branch_name"`
+	Request         string    `json:"request"`
+	TopK            int       `json:"top_k"`
+	RerankerEnabled *bool     `json:"reranker_enabled,omitempty"`
+}
+
 func (s *Server) handleRepositoryAsk(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
@@ -178,6 +186,66 @@ func (s *Server) handleRepositoryAsk(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (s *Server) handleGenerateImplementationPlan(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
+	var req repositoryWorkflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if req.Request == "" {
+		writeError(w, http.StatusBadRequest, "request is required")
+		return
+	}
+	resp, err := s.codeQA.GenerateImplementationPlan(r.Context(), codeqa.WorkflowRequest{
+		UserID:          user.ID,
+		RepositoryID:    req.RepositoryID,
+		BranchName:      req.BranchName,
+		Request:         req.Request,
+		TopK:            req.TopK,
+		RerankerEnabled: req.RerankerEnabled,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleAnalyzeImpact(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
+	var req repositoryWorkflowRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if req.Request == "" {
+		writeError(w, http.StatusBadRequest, "request is required")
+		return
+	}
+	resp, err := s.codeQA.AnalyzeImpact(r.Context(), codeqa.WorkflowRequest{
+		UserID:          user.ID,
+		RepositoryID:    req.RepositoryID,
+		BranchName:      req.BranchName,
+		Request:         req.Request,
+		TopK:            req.TopK,
+		RerankerEnabled: req.RerankerEnabled,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (s *Server) handleGetRepositoryRetrievalTrace(w http.ResponseWriter, r *http.Request) {
 	traceID, err := uuid.Parse(chi.URLParam(r, "trace_id"))
 	if err != nil {
@@ -193,7 +261,7 @@ func (s *Server) handleGetRepositoryRetrievalTrace(w http.ResponseWriter, r *htt
 }
 
 type repositoryFeedbackRequest struct {
-	TraceID            uuid.UUID `json:"trace_id"`
+	TraceID           uuid.UUID `json:"trace_id"`
 	AnswerCorrect     bool      `json:"answer_correct"`
 	CitationCorrect   bool      `json:"citation_correct"`
 	MissingFile       bool      `json:"missing_file"`
@@ -219,13 +287,13 @@ func (s *Server) handleCreateRepositoryFeedback(w http.ResponseWriter, r *http.R
 		return
 	}
 	feedback, err := s.repoStore.CreateFeedback(r.Context(), repositories.CreateFeedbackInput{
-		UserID:             user.ID,
-		TraceID:            req.TraceID,
-		AnswerCorrect:      req.AnswerCorrect,
-		CitationCorrect:    req.CitationCorrect,
-		MissingFile:        req.MissingFile,
-		MissingSymbol:      req.MissingSymbol,
-		HallucinatedClaim:  req.HallucinatedClaim,
+		UserID:            user.ID,
+		TraceID:           req.TraceID,
+		AnswerCorrect:     req.AnswerCorrect,
+		CitationCorrect:   req.CitationCorrect,
+		MissingFile:       req.MissingFile,
+		MissingSymbol:     req.MissingSymbol,
+		HallucinatedClaim: req.HallucinatedClaim,
 		ShouldHaveRefused: req.ShouldHaveRefused,
 		ReviewerNote:      req.ReviewerNote,
 	})

@@ -67,6 +67,61 @@ export type AskResponse = {
   };
 };
 
+export type EvidenceItem = {
+  chunk_id: string;
+  repository_id?: string;
+  snapshot_id?: string;
+  branch_name?: string;
+  commit_sha?: string;
+  path: string;
+  start_line?: number;
+  end_line?: number;
+  excerpt: string;
+  dense_score?: number;
+  rerank_score?: number;
+  reasons?: string[];
+};
+
+export type EvidenceConfidence = {
+  label: "High" | "Medium" | "Low";
+  score: number;
+  evidence_coverage: number;
+  citation_count: number;
+  context_token_count: number;
+  reasons: string[];
+};
+
+export type ImplementationPlanResponse = {
+  observed_evidence: EvidenceItem[];
+  recommended_changes: string[];
+  assumptions: string[];
+  missing_context: string[];
+  risks: string[];
+  tests: string[];
+  confidence: EvidenceConfidence;
+  answer: string;
+  citations: Citation[];
+  trace_id: string;
+  provenance: AskResponse["provenance"];
+  model: string;
+};
+
+export type ImpactAnalysisResponse = {
+  observed_evidence: EvidenceItem[];
+  impacted_files: string[];
+  impacted_symbols: string[];
+  affected_tests: string[];
+  dependency_reasoning: string[];
+  risk_level: "High" | "Medium" | "Low";
+  missing_context: string[];
+  confidence: EvidenceConfidence;
+  answer: string;
+  citations: Citation[];
+  trace_id: string;
+  provenance: AskResponse["provenance"];
+  model: string;
+};
+
 export type FeedbackPayload = {
   trace_id: string;
   answer_correct: boolean;

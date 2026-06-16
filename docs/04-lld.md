@@ -238,6 +238,61 @@ rerank_score
 metadata
 ```
 
+## Repository Workflow LLD
+
+Phase 16 adds two read-only workflows on top of repository Q&A:
+
+```text
+POST /v1/plans
+POST /v1/impact
+```
+
+Both workflows reuse the repository retrieval path:
+
+```text
+request
+-> repository ownership check
+-> question rewrite
+-> adaptive retrieval policy
+-> repository dense retrieval
+-> optional reranking
+-> context assembly
+-> Gemini grounded generation
+-> structured workflow response
+```
+
+Implementation planning response:
+
+```text
+Observed Evidence
+Recommended Changes
+Assumptions
+Missing Context
+Risks
+Tests
+Confidence
+```
+
+Impact analysis response:
+
+```text
+Observed Evidence
+Impacted Files
+Impacted Symbols
+Affected Tests
+Dependency Reasoning
+Risk Level
+Missing Context
+Confidence
+```
+
+Confidence is evidence-derived. It considers citation count, retrieved file
+coverage, context token count, retrieval scores, commit SHA provenance, and
+missing-context signals. It is not copied from the model output.
+
+The workflows are read-only. They do not edit code, open PRs, generate diagrams,
+or run autonomous agents.
+
 The citation proves which chunk supported the answer.
 
 ## Evaluation LLD
@@ -304,4 +359,3 @@ Controls:
 - Prompt injection defense.
 - Secret Manager in production.
 - Avoid tracing sensitive full content.
-

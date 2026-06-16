@@ -11,7 +11,7 @@ flowchart LR
   PG[(PostgreSQL)]
   Pinecone[(Pinecone)]
   Vertex[Vertex AI]
-  UI[Streamlit UI]
+  UI[React UI]
 
   User --> UI
   Admin --> UI
@@ -33,7 +33,7 @@ Goal:
 ```mermaid
 sequenceDiagram
   actor User
-  participant UI as Streamlit UI
+  participant UI as React UI
   participant API as Go API
   participant Auth as Auth Service
   participant DB as PostgreSQL
@@ -58,7 +58,7 @@ Goal:
 ```mermaid
 sequenceDiagram
   actor User
-  participant UI as Streamlit UI
+  participant UI as React UI
   participant API as Go API
   participant Doc as Document Service
   participant DB as PostgreSQL
@@ -114,7 +114,7 @@ Goal:
 ```mermaid
 sequenceDiagram
   actor User
-  participant UI as Streamlit UI
+  participant UI as React UI
   participant API as Go API
   participant Chat as Chat Service
   participant Retrieval as Retrieval Service
@@ -157,7 +157,7 @@ Goal:
 ```mermaid
 sequenceDiagram
   actor User
-  participant UI as Streamlit UI
+  participant UI as React UI
   participant API as Go API
   participant DB as PostgreSQL
 
@@ -178,7 +178,7 @@ Goal:
 ```mermaid
 sequenceDiagram
   actor User
-  participant UI as Streamlit UI
+  participant UI as React UI
   participant API as Go API
   participant Eval as Evaluation Service
   participant DB as PostgreSQL
@@ -221,6 +221,38 @@ sequenceDiagram
   API-->>User: 204 No Content
 ```
 
+## Use Case 8: Generate Repository Plan or Impact Analysis
+
+Goal:
+
+- Turn cited repository evidence into a read-only implementation plan or impact
+  analysis without inventing unsupported changes.
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant UI as React UI
+  participant API as Go API
+  participant CodeQA as Code Q&A Service
+  participant Retrieval as Repository Retriever
+  participant Gemini as Gemini
+  participant DB as PostgreSQL
+
+  User->>UI: Click Generate Plan or Analyze Impact
+  UI->>API: POST /v1/plans or POST /v1/impact
+  API->>CodeQA: Validate user/repository request
+  CodeQA->>Retrieval: Retrieve cited repository evidence
+  Retrieval->>DB: Hydrate chunks and provenance
+  DB-->>Retrieval: Files, chunks, line ranges, commit SHA
+  Retrieval-->>CodeQA: Evidence hits
+  CodeQA->>Gemini: Grounded workflow prompt with untrusted context
+  Gemini-->>CodeQA: Draft plan or impact analysis
+  CodeQA->>CodeQA: Add evidence-derived confidence and missing context
+  CodeQA-->>API: Structured workflow response
+  API-->>UI: Evidence, plan/impact, confidence
+  UI-->>User: Show cited workflow output
+```
+
 ## Use Case Summary
 
 | Use Case | Primary Components | Main Risk |
@@ -232,4 +264,4 @@ sequenceDiagram
 | Debug | API, retrieval_traces | Missing observability |
 | Eval | Evaluation Service, Ragas | Misleading quality metrics |
 | Delete | Document Service, Pinecone, PostgreSQL | Stale vectors |
-
+| Plan/Impact | React UI, Code Q&A, Repository Retriever, Gemini | Unsupported recommendations |

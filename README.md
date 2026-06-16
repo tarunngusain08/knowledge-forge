@@ -18,8 +18,9 @@ Index repository
 The current repository-intelligence path can import/index one repository
 snapshot, answer repository questions with cited file evidence, classify the
 query, choose an adaptive retrieval budget, assemble context under a token
-budget, and persist answer provenance for debugging and evaluation. Planning and
-impact analysis are intentionally deferred.
+budget, persist answer provenance for debugging and evaluation, and generate
+read-only implementation plans and impact analyses grounded in retrieved
+evidence.
 
 ## Target Retrieval Flow
 
@@ -62,15 +63,17 @@ repository question
 -> context assembly under token budget
 -> Gemini/mock grounded answer
 -> citations with repository, branch, commit SHA, file path, and line range
+-> optional implementation plan or impact analysis with evidence-derived confidence
 ```
 
 The MVP includes repository registration, safe file walking, code chunking,
 embedding/upsert, dense retrieval, retrieval traces, and worker/API job
 processing. Phase 14 adds adaptive query policy, context compression, retrieved
 chunk provenance, stage contribution tracking, and estimated generation cost in
-repository retrieval traces. It does not enable graph retrieval, implementation
-planning, impact analysis, PR review, diagrams, multi-repo intelligence, or
-repository memory.
+repository retrieval traces. Phase 16 adds read-only planning and impact
+analysis outputs with observed evidence, missing context, risks/tests, and
+evidence-derived confidence. Graph retrieval, PR review, diagrams, multi-repo
+intelligence, autonomous code changes, and repository memory remain out of scope.
 
 ## Local Development
 
@@ -107,6 +110,8 @@ The older Streamlit demo remains under `ui/streamlit` as a fallback.
 - `POST /v1/repositories/{repository_id}/ingestions`
 - `GET /v1/ingestions/{job_id}`
 - `POST /v1/ask`
+- `POST /v1/plans`
+- `POST /v1/impact`
 - `GET /v1/retrieval-traces/{trace_id}`
 - `POST /v1/feedback`
 - `POST /internal/repository-jobs/{job_id}/process`
