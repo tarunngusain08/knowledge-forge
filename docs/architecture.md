@@ -43,7 +43,9 @@ flowchart LR
   CTX --> B[Token Budgeted Evidence]
   B --> G[Gemini Grounded Generation]
   G --> A[Answer + File/Line Citations]
+  A --> W[Read-only Plan or Impact Analysis]
   A --> T[Trace + Provenance + Cost]
+  W --> E[Evidence-derived Confidence]
 ```
 
 Repository model:
@@ -83,7 +85,7 @@ Pinecone, LangChainGo, or Ragas directly.
 
 The primary UI is a React/Vite product surface focused on the North-Star
 workflow. It keeps repository import, question, evidence, plan outline, impact
-outline, trace/provenance, and structured feedback in one demo-oriented flow.
+analysis, trace/provenance, and structured feedback in one demo-oriented flow.
 The Streamlit UI remains in `ui/streamlit` as a fallback.
 
 Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
@@ -102,6 +104,14 @@ assembly then collapses adjacent chunks from the same file and trims the final
 evidence set before Gemini sees it. Retrieval traces persist the policy,
 retrieval path, stage contributions, retrieved chunk IDs, prompt version, model,
 latency, and estimated cost.
+
+Phase 16 adds two constrained repository workflows: implementation planning and
+impact analysis. Both call the same evidence-grounded repository retrieval path
+as Q&A, then return structured sections such as observed evidence, recommended
+changes, missing context, tests, impacted files, and risks. Confidence is
+derived from citations, retrieval scores, context volume, commit provenance, and
+missing-context signals; it is not model self-confidence. The workflows are
+read-only and do not mutate code, open PRs, or run autonomous agents.
 
 ## Repository Ingestion Safety
 

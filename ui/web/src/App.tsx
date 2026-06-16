@@ -17,15 +17,27 @@ import {
 } from "lucide-react";
 import {
   apiBaseUrl,
+  analyzeImpact,
   askRepository,
   createRepository,
+  generatePlan,
   getTrace,
   login,
   saveFeedback,
   startIngestion
 } from "./api";
 import { citationLabel, compactList, currency } from "./format";
-import type { AskResponse, Citation, FeedbackPayload, IngestionJob, Repository } from "./types";
+import type {
+  AskResponse,
+  Citation,
+  EvidenceConfidence,
+  EvidenceItem,
+  FeedbackPayload,
+  ImpactAnalysisResponse,
+  ImplementationPlanResponse,
+  IngestionJob,
+  Repository
+} from "./types";
 
 type RerankerMode = "adaptive" | "on" | "off";
 
@@ -43,6 +55,8 @@ export function App() {
   const [topK, setTopK] = useState(5);
   const [rerankerMode, setRerankerMode] = useState<RerankerMode>("adaptive");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
+  const [plan, setPlan] = useState<ImplementationPlanResponse | null>(null);
+  const [impact, setImpact] = useState<ImpactAnalysisResponse | null>(null);
   const [trace, setTrace] = useState<unknown>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -128,6 +142,8 @@ export function App() {
     }
     setError("");
     setTrace(null);
+    setPlan(null);
+    setImpact(null);
     setFeedbackSaved(false);
     setBusy("ask");
     try {
@@ -142,6 +158,48 @@ export function App() {
       setFeedback((prev) => ({ ...prev, trace_id: payload.trace_id }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Question failed");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handlePlan() {
+    if (!repository || !question.trim()) {
+      return;
+    }
+    setError("");
+    setBusy("plan");
+    try {
+      setPlan(await generatePlan(token, {
+        repository_id: repository.id,
+        branch_name: repository.default_branch || "main",
+        request: question,
+        top_k: topK,
+        ...(rerankerMode === "adaptive" ? {} : { reranker_enabled: rerankerMode === "on" })
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Plan generation failed");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleImpact() {
+    if (!repository || !question.trim()) {
+      return;
+    }
+    setError("");
+    setBusy("impact");
+    try {
+      setImpact(await analyzeImpact(token, {
+        repository_id: repository.id,
+        branch_name: repository.default_branch || "main",
+        request: question,
+        top_k: topK,
+        ...(rerankerMode === "adaptive" ? {} : { reranker_enabled: rerankerMode === "on" })
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impact analysis failed");
     } finally {
       setBusy("");
     }
@@ -370,22 +428,43 @@ export function App() {
 
           <section className="workflow-grid">
             <article className="panel">
-              <h2>Plan</h2>
+              <div className="panel-heading">
+                <h2>Plan</h2>
+                <button className="secondary compact" onClick={handlePlan} disabled={!repository || busy === "plan"}>
+                  {busy === "plan" ? <Loader2 className="spin" size={14} aria-hidden /> : <Send size={14} aria-hidden />}
+                  Generate
+                </button>
+              </div>
               <SectionRows
                 rows={[
-                  ["Observed Evidence", citedFiles.length ? citedFiles.join("\n") : "none"],
-                  ["Assumptions", answer ? "limited to cited repository evidence" : "none"],
-                  ["Tests", citedFiles.some((file) => file.includes("_test")) ? citedFiles.filter((file) => file.includes("_test")).join("\n") : "not identified"]
+                  ["Observed Evidence", plan ? formatEvidence(plan.observed_evidence) : citedFiles.length ? citedFiles.join("\n") : "none"],
+                  ["Recommended Changes", plan ? formatList(plan.recommended_changes) : "not generated"],
+                  ["Assumptions", plan ? formatList(plan.assumptions) : answer ? "limited to cited repository evidence" : "none"],
+                  ["Missing Context", plan ? formatList(plan.missing_context) : "not generated"],
+                  ["Risks", plan ? formatList(plan.risks) : "not generated"],
+                  ["Tests", plan ? formatList(plan.tests) : citedFiles.some((file) => file.includes("_test")) ? citedFiles.filter((file) => file.includes("_test")).join("\n") : "not identified"],
+                  ["Confidence", plan ? confidenceLabel(plan.confidence) : "not generated"]
                 ]}
               />
             </article>
             <article className="panel">
-              <h2>Impact</h2>
+              <div className="panel-heading">
+                <h2>Impact</h2>
+                <button className="secondary compact" onClick={handleImpact} disabled={!repository || busy === "impact"}>
+                  {busy === "impact" ? <Loader2 className="spin" size={14} aria-hidden /> : <Send size={14} aria-hidden />}
+                  Analyze
+                </button>
+              </div>
               <SectionRows
                 rows={[
-                  ["Impacted Files", citedFiles.length ? citedFiles.join("\n") : "none"],
-                  ["Risk", answer?.provenance?.context_token_count ? "evidence available" : "unknown"],
-                  ["Missing Context", answer?.citations?.length ? "none flagged" : "no citations yet"]
+                  ["Observed Evidence", impact ? formatEvidence(impact.observed_evidence) : citedFiles.length ? citedFiles.join("\n") : "none"],
+                  ["Impacted Files", impact ? formatList(impact.impacted_files) : citedFiles.length ? citedFiles.join("\n") : "none"],
+                  ["Impacted Symbols", impact ? formatList(impact.impacted_symbols) : "not generated"],
+                  ["Affected Tests", impact ? formatList(impact.affected_tests) : "not identified"],
+                  ["Dependency Reasoning", impact ? formatList(impact.dependency_reasoning) : "not generated"],
+                  ["Risk", impact ? impact.risk_level : answer?.provenance?.context_token_count ? "evidence available" : "unknown"],
+                  ["Missing Context", impact ? formatList(impact.missing_context) : answer?.citations?.length ? "none flagged" : "no citations yet"],
+                  ["Confidence", impact ? confidenceLabel(impact.confidence) : "not generated"]
                 ]}
               />
             </article>
@@ -461,6 +540,27 @@ function SectionRows({ rows }: { rows: Array<[string, string]> }) {
       ))}
     </div>
   );
+}
+
+function formatEvidence(items: EvidenceItem[]) {
+  if (items.length === 0) {
+    return "none";
+  }
+  return items.map((item) => {
+    const range = item.start_line && item.end_line ? `:${item.start_line}-${item.end_line}` : "";
+    const commit = item.commit_sha ? ` @ ${item.commit_sha.slice(0, 12)}` : "";
+    return `${item.path || "unknown"}${range}${commit}\n${item.excerpt}`;
+  }).join("\n\n");
+}
+
+function formatList(values: string[]) {
+  return values.length ? values.join("\n") : "none";
+}
+
+function confidenceLabel(confidence: EvidenceConfidence) {
+  const percent = Math.round(confidence.score * 100);
+  const coverage = Math.round(confidence.evidence_coverage * 100);
+  return `${confidence.label} (${percent}%, evidence coverage ${coverage}%)\n${confidence.reasons.join("\n")}`;
 }
 
 function FeedbackForm({

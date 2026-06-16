@@ -112,6 +112,7 @@ pre {
 
 .brand-row,
 .panel-title,
+.panel-heading,
 .topbar-meta,
 .primary,
 .secondary,
@@ -126,7 +127,8 @@ details > summary {
 
 .brand-row h1,
 .panel-title h2,
-.panel h2 {
+.panel h2,
+.panel-heading h2 {
   margin: 0;
   color: #17201b;
   font-size: 16px;
@@ -174,6 +176,11 @@ details > summary {
   gap: 14px;
 }
 
+.panel-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .controls {
   display: grid;
   align-content: end;
@@ -188,6 +195,12 @@ details > summary {
   border-radius: 6px;
   padding: 8px 12px;
   font-weight: 750;
+}
+
+.compact {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
 }
 
 .primary {

@@ -2,13 +2,14 @@
 
 ## System Context
 
-Knowledge Forge is a RAG system for company documents. The system turns uploaded
-files into searchable chunks, retrieves relevant chunks for a user question, and
-uses Gemini to produce grounded answers with citations.
+Knowledge Forge is an evidence-grounded RAG and repository-intelligence system.
+It turns documents and repository snapshots into searchable chunks, retrieves
+relevant evidence for user questions, and uses Gemini to produce cited answers,
+implementation plans, and impact analyses.
 
 ```mermaid
 flowchart LR
-  User[User] --> UI[Streamlit Demo UI]
+  User[User] --> UI[React Product UI]
   UI --> API[Go Chi API]
   API --> PG[(PostgreSQL)]
   API --> Pinecone[(Pinecone Vector DB)]
@@ -25,7 +26,7 @@ flowchart TB
   subgraph GCP[Google Cloud]
     API[Cloud Run API]
     Worker[Cloud Run Worker]
-    UI[Cloud Run Streamlit UI]
+    UI[Cloud Run React UI]
     Migrate[Cloud Run Migration Job]
     SQL[(Cloud SQL PostgreSQL)]
     Secrets[Secret Manager]
@@ -53,15 +54,17 @@ flowchart TB
 
 ## Main Runtime Components
 
-### Streamlit UI
+### React UI
 
 Purpose:
 
-- Provides a demo frontend for uploads, chat, debug, and evaluation.
+- Provides the primary product frontend for repository import, Q&A, cited
+  evidence, implementation planning, impact analysis, debug traces, and
+  feedback.
 
 Why it exists:
 
-- Makes the project easy to demo without building a full React application.
+- Makes the North-Star workflow demoable from one focused interface.
 
 If removed:
 
@@ -73,6 +76,7 @@ Purpose:
 
 - Owns HTTP routing, auth, document APIs, chat APIs, debug endpoints, and eval
   endpoints.
+- Exposes repository workflow endpoints for Q&A, planning, and impact analysis.
 
 Why it exists:
 
@@ -187,6 +191,7 @@ flowchart TB
     AuthHandlers[Auth Handlers]
     DocumentHandlers[Document Handlers]
     ChatHandlers[Chat Handlers]
+    CodeQAHandlers[Repository Workflow Handlers]
     EvalHandlers[Eval Handlers]
     JobHandlers[Internal Job Handlers]
   end
@@ -195,6 +200,7 @@ flowchart TB
     Auth[Auth Service]
     Documents[Document Service]
     Chat[Chat Service]
+    CodeQA[Code Q&A Service]
     Retrieval[Retrieval Service]
     Evaluation[Evaluation Service]
     Costs[Cost Service]
@@ -217,16 +223,20 @@ flowchart TB
   Router --> AuthHandlers
   Router --> DocumentHandlers
   Router --> ChatHandlers
+  Router --> CodeQAHandlers
   Router --> EvalHandlers
   Router --> JobHandlers
 
   AuthHandlers --> Auth
   DocumentHandlers --> Documents
   ChatHandlers --> Chat
+  CodeQAHandlers --> CodeQA
   EvalHandlers --> Evaluation
   JobHandlers --> Documents
 
   Chat --> Retrieval
+  CodeQA --> Retrieval
+  CodeQA --> VertexGemini
   Documents --> LangChain
   Documents --> VertexEmb
   Documents --> Pinecone
@@ -295,4 +305,3 @@ flowchart LR
 | Gemini grounded generation | Strong managed LLM | Must guard against hallucination |
 | Provider interfaces | Testability and vendor isolation | More upfront structure |
 | OpenTelemetry | Production debugging | Requires trace hygiene |
-
