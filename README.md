@@ -166,6 +166,7 @@ python3 eval-runner/repo_benchmark_runner.py \
 - [Use Cases and Sequence Diagrams](docs/03-usecases-sequence-diagrams.md)
 - [LLD](docs/04-lld.md)
 - [DB Design and Schema](docs/05-db-design-schema.md)
+- [UI and Backend Quality Guide](docs/06-ui-backend-quality.md)
 - [Architecture](docs/architecture.md)
 - [Implementation Plan](docs/implementation-plan.md)
 - [Deployment](deploy/README.md)
