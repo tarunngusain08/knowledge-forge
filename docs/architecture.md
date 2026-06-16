@@ -1,6 +1,8 @@
 # Knowledge Forge Architecture
 
-Knowledge Forge is a production-style company-document question answering system.
+Knowledge Forge is a production-style evidence-grounded knowledge assistant. It
+supports the original company-document RAG path and now includes a focused
+repository-intelligence MVP for cited codebase Q&A.
 
 ```mermaid
 flowchart LR
@@ -14,6 +16,47 @@ flowchart LR
   RR --> G[Gemini Grounded Generation]
   G --> C[Answer + Citations]
 ```
+
+## Repository Intelligence MVP
+
+```mermaid
+flowchart LR
+  R[Repository or Branch] --> G[Git Worktree Resolver]
+  G --> S[Safe File Walker]
+  S --> C[Code Chunker]
+  C --> PG[(PostgreSQL Files + Chunks)]
+  C --> E[Vertex or Mock Embeddings]
+  E --> PC[Pinecone Vectors]
+```
+
+```mermaid
+flowchart LR
+  Q[Repository Question] --> QE[Query Embedding]
+  QE --> P[Pinecone Dense Retrieval]
+  P --> H[Hydrate Chunks from PostgreSQL]
+  H --> RR{Reranker Enabled?}
+  RR -->|yes| V[Vertex Ranking API]
+  RR -->|no| CTX[Context Assembly]
+  V --> CTX
+  CTX --> G[Gemini Grounded Generation]
+  G --> A[Answer + File/Line Citations]
+```
+
+Repository model:
+
+```text
+Repository
+└── Branch
+    └── Snapshot(commit SHA)
+        ├── Files
+        ├── Chunks
+        ├── Symbols
+        └── Graph
+```
+
+Phase 12 freezes the repository retrieval MVP at dense retrieval scoped by
+repository and snapshot metadata. Lexical, symbol, and static graph retrieval
+remain future benchmarked improvements rather than default behavior.
 
 ```mermaid
 flowchart TB
@@ -37,6 +80,18 @@ Pinecone, LangChainGo, or Ragas directly.
 Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
 exact identifiers, acronyms, filenames, and policy names. Reciprocal Rank Fusion
 combines both candidate sets before reranking.
+
+Repository Q&A uses Pinecone dense retrieval in this milestone. Every repository
+answer is tied to a repository, branch, immutable commit SHA snapshot, retrieved
+chunk IDs, file path, and line range. The context is treated as untrusted input;
+unsupported claims should be refused rather than invented.
+
+## Repository Ingestion Safety
+
+Repository ingestion skips symlinks, ignored build/dependency directories,
+binary files, unsupported extensions, empty files, and files above the MVP size
+limit. Remote clones run with a timeout. Local paths are normalized before
+walking so path traversal and accidental out-of-root reads are avoided.
 
 ## Evaluation
 

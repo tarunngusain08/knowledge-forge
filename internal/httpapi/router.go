@@ -10,23 +10,30 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 	"github.com/tarunngusain08/knowledge-forge/internal/chat"
+	"github.com/tarunngusain08/knowledge-forge/internal/codeqa"
 	"github.com/tarunngusain08/knowledge-forge/internal/config"
 	"github.com/tarunngusain08/knowledge-forge/internal/documents"
 	"github.com/tarunngusain08/knowledge-forge/internal/evaluation"
+	"github.com/tarunngusain08/knowledge-forge/internal/indexing"
 	"github.com/tarunngusain08/knowledge-forge/internal/observability"
 	"github.com/tarunngusain08/knowledge-forge/internal/rag"
+	"github.com/tarunngusain08/knowledge-forge/internal/repositories"
 	"github.com/tarunngusain08/knowledge-forge/internal/worker"
 )
 
 type Dependencies struct {
-	Config     config.Config
-	Logger     *slog.Logger
-	Auth       *auth.Service
-	Documents  *documents.Service
-	Worker     *worker.Service
-	Chat       *chat.Service
-	Retriever  rag.Retriever
-	Evaluation *evaluation.Service
+	Config            config.Config
+	Logger            *slog.Logger
+	Auth              *auth.Service
+	Documents         *documents.Service
+	Worker            *worker.Service
+	Chat              *chat.Service
+	Retriever         rag.Retriever
+	Evaluation        *evaluation.Service
+	Repositories      *repositories.Service
+	RepositoryStore   *repositories.Store
+	RepositoryIndexer *indexing.RepositoryIndexer
+	CodeQA            *codeqa.Service
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -37,6 +44,10 @@ func NewRouter(deps Dependencies) http.Handler {
 		chat:           deps.Chat,
 		retriever:      deps.Retriever,
 		evaluation:     deps.Evaluation,
+		repositories:   deps.Repositories,
+		repoStore:      deps.RepositoryStore,
+		repoIndexer:    deps.RepositoryIndexer,
+		codeQA:         deps.CodeQA,
 		maxUploadBytes: deps.Config.MaxUploadBytes,
 	}
 	r := chi.NewRouter()
@@ -76,10 +87,25 @@ func NewRouter(deps Dependencies) http.Handler {
 				protected.Post("/eval/runs", server.handleCreateEvalRun)
 				protected.Get("/eval/runs/{id}", server.handleGetEvalRun)
 			}
+			if deps.Repositories != nil {
+				protected.Post("/v1/repositories", server.handleCreateRepository)
+				protected.Get("/v1/repositories/{repository_id}", server.handleGetRepository)
+				protected.Post("/v1/repositories/{repository_id}/ingestions", server.handleCreateRepositoryIngestion)
+				protected.Get("/v1/ingestions/{job_id}", server.handleGetRepositoryIngestion)
+			}
+			if deps.CodeQA != nil {
+				protected.Post("/v1/ask", server.handleRepositoryAsk)
+			}
+			if deps.RepositoryStore != nil {
+				protected.Get("/v1/retrieval-traces/{trace_id}", server.handleGetRepositoryRetrievalTrace)
+			}
 		})
 	}
 	if deps.Worker != nil {
 		r.Post("/internal/jobs/{job_id}/process", server.handleProcessJob)
+	}
+	if deps.RepositoryIndexer != nil {
+		r.Post("/internal/repository-jobs/{job_id}/process", server.handleProcessRepositoryJob)
 	}
 
 	return r
@@ -92,6 +118,10 @@ type Server struct {
 	chat           *chat.Service
 	retriever      rag.Retriever
 	evaluation     *evaluation.Service
+	repositories   *repositories.Service
+	repoStore      *repositories.Store
+	repoIndexer    *indexing.RepositoryIndexer
+	codeQA         *codeqa.Service
 	maxUploadBytes int64
 }
 

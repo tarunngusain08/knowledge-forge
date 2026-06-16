@@ -129,18 +129,7 @@ func (g *Gemini) httpClient() *http.Client {
 func citationsFromContext(hits []rag.RetrievalHit) []rag.Citation {
 	citations := make([]rag.Citation, 0, len(hits))
 	for _, hit := range hits {
-		citations = append(citations, rag.Citation{
-			ChunkID:     hit.Chunk.ID,
-			DocumentID:  hit.Chunk.DocumentID,
-			Document:    fmt.Sprint(hit.Chunk.Metadata["filename"]),
-			PageNumber:  hit.Chunk.PageNumber,
-			Excerpt:     excerpt(hit.Chunk.Content, 320),
-			DenseScore:  hit.DenseScore,
-			LexicalRank: hit.LexicalRank,
-			FusedRank:   hit.FusedRank,
-			RerankScore: hit.RerankScore,
-			Metadata:    hit.Chunk.Metadata,
-		})
+		citations = append(citations, rag.CitationFromHit(hit, excerpt(hit.Chunk.Content, 320)))
 	}
 	return citations
 }

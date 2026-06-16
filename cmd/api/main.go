@@ -12,14 +12,18 @@ import (
 
 	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 	"github.com/tarunngusain08/knowledge-forge/internal/chat"
+	"github.com/tarunngusain08/knowledge-forge/internal/codeqa"
 	"github.com/tarunngusain08/knowledge-forge/internal/config"
 	"github.com/tarunngusain08/knowledge-forge/internal/database"
 	"github.com/tarunngusain08/knowledge-forge/internal/db"
 	"github.com/tarunngusain08/knowledge-forge/internal/documents"
 	"github.com/tarunngusain08/knowledge-forge/internal/evaluation"
 	"github.com/tarunngusain08/knowledge-forge/internal/httpapi"
+	"github.com/tarunngusain08/knowledge-forge/internal/indexing"
 	"github.com/tarunngusain08/knowledge-forge/internal/observability"
 	"github.com/tarunngusain08/knowledge-forge/internal/providers"
+	gitprovider "github.com/tarunngusain08/knowledge-forge/internal/providers/git"
+	"github.com/tarunngusain08/knowledge-forge/internal/repositories"
 	"github.com/tarunngusain08/knowledge-forge/internal/retrieval"
 	"github.com/tarunngusain08/knowledge-forge/internal/worker"
 )
@@ -88,16 +92,32 @@ func main() {
 	retriever := retrieval.NewService(db.New(pool), queryProviders.Embedder, queryProviders.Vector, lexical, queryProviders.Reranker)
 	chatService := chat.NewService(db.New(pool), queryProviders.LLM, retriever)
 	evalService := evaluation.NewService(db.New(pool), retriever)
+	repoStore := repositories.NewStore(pool)
+	repoService := repositories.NewService(repoStore)
+	repoIndexer := indexing.NewRepositoryIndexer(
+		repoStore,
+		gitprovider.Provider{},
+		indexingProviders.Embedder,
+		indexingProviders.Vector,
+		logger,
+		cfg.WorkerName,
+	)
+	codeRetriever := retrieval.NewCodeService(repoStore, indexingProviders.Embedder, indexingProviders.Vector, queryProviders.Reranker)
+	codeQAService := codeqa.NewService(repoStore, db.New(pool), queryProviders.LLM, codeRetriever)
 
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Config:     cfg,
-		Logger:     logger,
-		Auth:       authService,
-		Documents:  documentService,
-		Worker:     workerService,
-		Chat:       chatService,
-		Retriever:  retriever,
-		Evaluation: evalService,
+		Config:            cfg,
+		Logger:            logger,
+		Auth:              authService,
+		Documents:         documentService,
+		Worker:            workerService,
+		Chat:              chatService,
+		Retriever:         retriever,
+		Evaluation:        evalService,
+		Repositories:      repoService,
+		RepositoryStore:   repoStore,
+		RepositoryIndexer: repoIndexer,
+		CodeQA:            codeQAService,
 	})
 
 	server := &http.Server{

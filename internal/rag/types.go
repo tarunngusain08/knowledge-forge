@@ -85,21 +85,30 @@ type Message struct {
 }
 
 type Citation struct {
-	ChunkID     uuid.UUID      `json:"chunk_id"`
-	DocumentID  uuid.UUID      `json:"document_id"`
-	Document    string         `json:"document"`
-	PageNumber  *int           `json:"page_number,omitempty"`
-	Excerpt     string         `json:"excerpt"`
-	DenseScore  float64        `json:"dense_score,omitempty"`
-	LexicalRank int            `json:"lexical_rank,omitempty"`
-	FusedRank   int            `json:"fused_rank,omitempty"`
-	RerankScore float64        `json:"rerank_score,omitempty"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
+	ChunkID      uuid.UUID      `json:"chunk_id"`
+	DocumentID   uuid.UUID      `json:"document_id"`
+	Document     string         `json:"document"`
+	RepositoryID uuid.UUID      `json:"repository_id,omitempty"`
+	SnapshotID   uuid.UUID      `json:"snapshot_id,omitempty"`
+	BranchName   string         `json:"branch_name,omitempty"`
+	CommitSHA    string         `json:"commit_sha,omitempty"`
+	Path         string         `json:"path,omitempty"`
+	StartLine    int            `json:"start_line,omitempty"`
+	EndLine      int            `json:"end_line,omitempty"`
+	PageNumber   *int           `json:"page_number,omitempty"`
+	Excerpt      string         `json:"excerpt"`
+	DenseScore   float64        `json:"dense_score,omitempty"`
+	LexicalRank  int            `json:"lexical_rank,omitempty"`
+	FusedRank    int            `json:"fused_rank,omitempty"`
+	RerankScore  float64        `json:"rerank_score,omitempty"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
 }
 
 type RetrievalRequest struct {
 	UserID          uuid.UUID `json:"user_id"`
 	SessionID       uuid.UUID `json:"session_id"`
+	RepositoryID    uuid.UUID `json:"repository_id,omitempty"`
+	BranchName      string    `json:"branch_name,omitempty"`
 	Query           string    `json:"query"`
 	TopK            int       `json:"top_k"`
 	RerankerEnabled bool      `json:"reranker_enabled"`
@@ -108,8 +117,13 @@ type RetrievalRequest struct {
 type RetrievalResult struct {
 	OriginalQuery  string         `json:"original_query"`
 	RewrittenQuery string         `json:"rewritten_query"`
+	RepositoryID   uuid.UUID      `json:"repository_id,omitempty"`
+	SnapshotID     uuid.UUID      `json:"snapshot_id,omitempty"`
+	BranchName     string         `json:"branch_name,omitempty"`
 	DenseHits      []RetrievalHit `json:"dense_hits"`
 	LexicalHits    []RetrievalHit `json:"lexical_hits"`
+	SymbolHits     []RetrievalHit `json:"symbol_hits,omitempty"`
+	GraphHits      []RetrievalHit `json:"graph_hits,omitempty"`
 	FusedHits      []RetrievalHit `json:"fused_hits"`
 	RerankedHits   []RetrievalHit `json:"reranked_hits"`
 	Latency        time.Duration  `json:"latency"`

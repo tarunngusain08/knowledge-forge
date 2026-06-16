@@ -4,7 +4,8 @@
 
 PostgreSQL is the durable source of truth for Knowledge Forge. It stores users,
 documents, chunks, indexing jobs, chat history, citations, retrieval traces, cost
-events, and evaluation runs.
+events, evaluation runs, repositories, repository snapshots, repository chunks,
+Git commit metadata, and repository retrieval traces.
 
 Pinecone is not the source of truth. Pinecone stores vector records for semantic
 search, while PostgreSQL stores the authoritative metadata and text chunks.
@@ -30,6 +31,18 @@ erDiagram
   users ||--o{ token_cost_events : incurs
   documents ||--o{ token_cost_events : costs
   chat_sessions ||--o{ token_cost_events : costs
+
+  users ||--o{ repositories : owns
+  repositories ||--o{ repo_branches : has
+  repositories ||--o{ repo_snapshots : indexed_as
+  repositories ||--o{ repository_ingestion_jobs : indexed_by
+  repositories ||--o{ git_commits : records
+  repositories ||--o{ repo_retrieval_traces : traces
+  repo_snapshots ||--o{ repo_file_versions : contains
+  repo_snapshots ||--o{ repo_file_chunks : chunked_into
+  repo_snapshots ||--o{ repo_symbols : defines
+  repo_files ||--o{ repo_file_versions : versioned_as
+  repo_files ||--o{ repo_file_chunks : chunked_as
 
   users {
     uuid id PK
@@ -139,6 +152,51 @@ erDiagram
     jsonb metrics
     text status
   }
+
+  repositories {
+    uuid id PK
+    uuid owner_user_id FK
+    text name
+    text remote_url
+    text local_path
+    text default_branch
+    text status
+  }
+
+  repo_snapshots {
+    uuid id PK
+    uuid repository_id FK
+    text branch_name
+    text commit_sha
+    text status
+    int file_count
+    int symbol_count
+    int chunk_count
+  }
+
+  repo_file_chunks {
+    uuid id PK
+    uuid repository_id FK
+    uuid snapshot_id FK
+    uuid file_id FK
+    uuid file_version_id FK
+    text path
+    text language
+    int start_line
+    int end_line
+    text content
+    jsonb metadata
+  }
+
+  repo_retrieval_traces {
+    uuid id PK
+    uuid repository_id FK
+    uuid snapshot_id FK
+    text original_query
+    text rewritten_query
+    jsonb dense_hits
+    jsonb reranked_hits
+  }
 ```
 
 ## Table-by-Table Design
@@ -211,6 +269,43 @@ Why it exists:
 
 - Chunks are the core evidence unit used for retrieval and citations.
 
+### repositories
+
+Stores repository registrations owned by users.
+
+Important columns:
+
+- `owner_user_id`: repository owner.
+- `remote_url`: Git remote used for clone-based ingestion.
+- `local_path`: local path used for local demos and smoke tests.
+- `default_branch`: branch used when ingestion does not specify one.
+- `status`: active/archive/delete lifecycle.
+
+Constraints:
+
+- Either `remote_url` or `local_path` must be present.
+- `(owner_user_id, name)` is unique.
+
+### repo_snapshots
+
+Stores immutable indexing runs for one repository branch and commit SHA.
+
+Why it exists:
+
+- Every repository answer and benchmark result must be reproducible against the
+  exact source state that was indexed.
+
+### repo_file_versions and repo_file_chunks
+
+`repo_file_versions` stores file content captured in a snapshot.
+`repo_file_chunks` stores retrievable evidence units with file path and line
+range metadata.
+
+Why they exist:
+
+- Pinecone stores vectors, but PostgreSQL remains the source of truth for code
+  text, line ranges, citations, and vector rebuilds.
+
 ### indexing_jobs
 
 Durable job queue for document indexing.
@@ -231,6 +326,24 @@ Index:
 Why it exists:
 
 - Upload should not block on extraction, embeddings, or Pinecone upsert.
+
+### repository_ingestion_jobs
+
+Durable job queue for repository indexing.
+
+Why it exists:
+
+- Repository indexing can be run asynchronously by the worker or synchronously
+  in local smoke tests with `process_now=true`.
+
+### repo_retrieval_traces
+
+Stores repository Q&A retrieval evidence.
+
+Why it exists:
+
+- Debugging repository answers requires seeing the dense candidates, reranked
+  context, prompt preview, and latency for the exact snapshot.
 
 ### chat_sessions
 
@@ -402,4 +515,3 @@ Benefits:
 Drawbacks:
 
 - English configuration may need tuning for multilingual documents.
-
