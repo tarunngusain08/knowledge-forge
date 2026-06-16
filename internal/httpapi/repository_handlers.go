@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -26,8 +25,8 @@ func (s *Server) handleCreateRepository(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var req createRepositoryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	repo, err := s.repositories.Create(r.Context(), repositories.CreateInput{
@@ -81,8 +80,8 @@ func (s *Server) handleCreateRepositoryIngestion(w http.ResponseWriter, r *http.
 		return
 	}
 	var req createRepositoryIngestionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	job, err := s.repositories.CreateIngestion(r.Context(), repositories.CreateIngestionInput{
@@ -163,8 +162,8 @@ func (s *Server) handleRepositoryAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req repositoryAskRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	if req.Question == "" {
@@ -193,8 +192,8 @@ func (s *Server) handleGenerateImplementationPlan(w http.ResponseWriter, r *http
 		return
 	}
 	var req repositoryWorkflowRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	if req.Request == "" {
@@ -223,8 +222,8 @@ func (s *Server) handleAnalyzeImpact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req repositoryWorkflowRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	if req.Request == "" {
@@ -278,8 +277,8 @@ func (s *Server) handleCreateRepositoryFeedback(w http.ResponseWriter, r *http.R
 		return
 	}
 	var req repositoryFeedbackRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request")
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	if req.TraceID == uuid.Nil {
