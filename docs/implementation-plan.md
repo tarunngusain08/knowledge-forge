@@ -78,8 +78,9 @@ Benchmark runner can call repo Q&A
 
 ## Next Phases
 
-- `tgusain/m13-repository-evaluation-benchmarks`: benchmark corpus, naive
-  semantic baseline, failure benchmarks, and complexity elimination gates.
+- `tgusain/m13-repository-evaluation-benchmarks`: repository benchmark metrics,
+  synthetic enterprise monolith corpus, failure benchmarks, live/offline
+  benchmark runner, and complexity elimination gates.
 - `tgusain/m14-adaptive-retrieval-cost-control`: query classification,
   retrieval budgets, context compression, answer provenance, and cost controls.
 - `tgusain/m15-product-experience`: React/Vite product UI and focused demo mode.
@@ -88,3 +89,30 @@ Benchmark runner can call repo Q&A
 
 Every milestone must leave the repository buildable and include relevant tests
 and documentation updates.
+
+## Phase 13: Repository Evaluation and Complexity Review
+
+Branch: `tgusain/m13-repository-evaluation-benchmarks`
+
+Implemented scope:
+
+- Repository-specific Go metrics for file coverage, symbol coverage,
+  line-range accuracy, citation coverage, evidence coverage, refusal accuracy,
+  latency, and cost.
+- Question-level comparison output: improved, unchanged, degraded.
+- Python benchmark runner that can score saved result JSONL or call `/v1/ask`
+  against a live API.
+- Synthetic Enterprise Monolith fixture with auth, billing, notifications,
+  API wiring, interfaces, and tests.
+- Failure labels for unsupported questions, deleted symbols, wrong-domain
+  questions, and prompt-injection attempts.
+- Evaluation documentation with component decision thresholds.
+
+Complexity gates:
+
+- Keep symbol retrieval only if expected file/symbol coverage improves by at
+  least 10%.
+- Enable graph retrieval only if Recall@K or file coverage improves by at least
+  10% without increasing latency by more than 25%.
+- Keep reranking only if MRR improves by at least 5% or faithfulness improves
+  meaningfully without unacceptable cost.

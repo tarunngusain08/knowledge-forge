@@ -110,6 +110,23 @@ python3 -m pytest eval-runner
 python3 -m py_compile ui/streamlit/app.py
 ```
 
+Repository benchmark fixture:
+
+```bash
+python3 eval-runner/repo_benchmark_runner.py \
+  --input eval-runner/benchmarks/synthetic_enterprise_monolith.jsonl \
+  --output /tmp/repo-benchmark.json
+```
+
+Compare a candidate run against a saved baseline:
+
+```bash
+python3 eval-runner/repo_benchmark_runner.py \
+  --input /tmp/knowledge-forge-candidate.jsonl \
+  --baseline-input /tmp/naive-semantic-baseline.jsonl \
+  --output /tmp/repo-benchmark-comparison.json
+```
+
 ## Documentation
 
 - [Docs Index](docs/README.md)
