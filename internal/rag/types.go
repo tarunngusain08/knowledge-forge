@@ -105,28 +105,40 @@ type Citation struct {
 }
 
 type RetrievalRequest struct {
-	UserID          uuid.UUID `json:"user_id"`
-	SessionID       uuid.UUID `json:"session_id"`
-	RepositoryID    uuid.UUID `json:"repository_id,omitempty"`
-	BranchName      string    `json:"branch_name,omitempty"`
-	Query           string    `json:"query"`
-	TopK            int       `json:"top_k"`
-	RerankerEnabled bool      `json:"reranker_enabled"`
+	UserID             uuid.UUID      `json:"user_id"`
+	SessionID          uuid.UUID      `json:"session_id"`
+	RepositoryID       uuid.UUID      `json:"repository_id,omitempty"`
+	BranchName         string         `json:"branch_name,omitempty"`
+	Query              string         `json:"query"`
+	TopK               int            `json:"top_k"`
+	CandidateK         int            `json:"candidate_k,omitempty"`
+	QueryCategory      string         `json:"query_category,omitempty"`
+	RetrievalPath      []string       `json:"retrieval_path,omitempty"`
+	RetrievalConfig    map[string]any `json:"retrieval_config,omitempty"`
+	ContextTokenBudget int            `json:"context_token_budget,omitempty"`
+	RerankerEnabled    bool           `json:"reranker_enabled"`
 }
 
 type RetrievalResult struct {
-	OriginalQuery  string         `json:"original_query"`
-	RewrittenQuery string         `json:"rewritten_query"`
-	RepositoryID   uuid.UUID      `json:"repository_id,omitempty"`
-	SnapshotID     uuid.UUID      `json:"snapshot_id,omitempty"`
-	BranchName     string         `json:"branch_name,omitempty"`
-	DenseHits      []RetrievalHit `json:"dense_hits"`
-	LexicalHits    []RetrievalHit `json:"lexical_hits"`
-	SymbolHits     []RetrievalHit `json:"symbol_hits,omitempty"`
-	GraphHits      []RetrievalHit `json:"graph_hits,omitempty"`
-	FusedHits      []RetrievalHit `json:"fused_hits"`
-	RerankedHits   []RetrievalHit `json:"reranked_hits"`
-	Latency        time.Duration  `json:"latency"`
+	OriginalQuery      string         `json:"original_query"`
+	RewrittenQuery     string         `json:"rewritten_query"`
+	RepositoryID       uuid.UUID      `json:"repository_id,omitempty"`
+	SnapshotID         uuid.UUID      `json:"snapshot_id,omitempty"`
+	BranchName         string         `json:"branch_name,omitempty"`
+	CommitSHA          string         `json:"commit_sha,omitempty"`
+	DenseHits          []RetrievalHit `json:"dense_hits"`
+	LexicalHits        []RetrievalHit `json:"lexical_hits"`
+	SymbolHits         []RetrievalHit `json:"symbol_hits,omitempty"`
+	GraphHits          []RetrievalHit `json:"graph_hits,omitempty"`
+	FusedHits          []RetrievalHit `json:"fused_hits"`
+	RerankedHits       []RetrievalHit `json:"reranked_hits"`
+	QueryCategory      string         `json:"query_category,omitempty"`
+	RetrievalPath      []string       `json:"retrieval_path,omitempty"`
+	RetrievalConfig    map[string]any `json:"retrieval_config,omitempty"`
+	ContextTokenCount  int            `json:"context_token_count,omitempty"`
+	RetrievedChunkIDs  []uuid.UUID    `json:"retrieved_chunk_ids,omitempty"`
+	StageContributions map[string]int `json:"stage_contributions,omitempty"`
+	Latency            time.Duration  `json:"latency"`
 }
 
 type LLMProvider interface {

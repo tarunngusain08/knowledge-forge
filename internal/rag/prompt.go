@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const PromptVersion = "grounded-v1"
+
 func BuildGroundedPrompt(req GenerateRequest) string {
 	var b strings.Builder
 	b.WriteString("You are an evidence-grounded knowledge assistant. Answer only from the provided context.\n")

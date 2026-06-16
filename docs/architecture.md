@@ -31,15 +31,19 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  Q[Repository Question] --> QE[Query Embedding]
+  Q[Repository Question] --> QC[Query Classifier]
+  QC --> RP[Adaptive Retrieval Policy]
+  RP --> QE[Query Embedding]
   QE --> P[Pinecone Dense Retrieval]
   P --> H[Hydrate Chunks from PostgreSQL]
   H --> RR{Reranker Enabled?}
   RR -->|yes| V[Vertex Ranking API]
   RR -->|no| CTX[Context Assembly]
   V --> CTX
-  CTX --> G[Gemini Grounded Generation]
+  CTX --> B[Token Budgeted Evidence]
+  B --> G[Gemini Grounded Generation]
   G --> A[Answer + File/Line Citations]
+  A --> T[Trace + Provenance + Cost]
 ```
 
 Repository model:
@@ -85,6 +89,14 @@ Repository Q&A uses Pinecone dense retrieval in this milestone. Every repository
 answer is tied to a repository, branch, immutable commit SHA snapshot, retrieved
 chunk IDs, file path, and line range. The context is treated as untrusted input;
 unsupported claims should be refused rather than invented.
+
+Phase 14 adds adaptive retrieval policy before repository generation. The policy
+classifies the question, chooses candidate depth, decides whether reranking is
+worth the extra latency/cost, and sets the context token budget. Context
+assembly then collapses adjacent chunks from the same file and trims the final
+evidence set before Gemini sees it. Retrieval traces persist the policy,
+retrieval path, stage contributions, retrieved chunk IDs, prompt version, model,
+latency, and estimated cost.
 
 ## Repository Ingestion Safety
 

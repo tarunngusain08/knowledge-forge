@@ -38,42 +38,60 @@ type IndexedFile struct {
 }
 
 type RetrievalTraceInput struct {
-	UserID          uuid.UUID
-	RepositoryID    uuid.UUID
-	SnapshotID      uuid.UUID
-	BranchName      string
-	OriginalQuery   string
-	RewrittenQuery  string
-	TopK            int
-	RerankerEnabled bool
-	DenseHits       any
-	LexicalHits     any
-	SymbolHits      any
-	GraphHits       any
-	FusedHits       any
-	RerankedHits    any
-	PromptPreview   string
-	LatencyMS       int64
+	UserID             uuid.UUID
+	RepositoryID       uuid.UUID
+	SnapshotID         uuid.UUID
+	BranchName         string
+	QueryCategory      string
+	RetrievalPath      any
+	RetrievalConfig    any
+	RetrievedChunkIDs  []uuid.UUID
+	StageContributions any
+	ContextTokenCount  int
+	PromptVersion      string
+	GenerationModel    string
+	EstimatedCostUSD   float64
+	OriginalQuery      string
+	RewrittenQuery     string
+	TopK               int
+	RerankerEnabled    bool
+	DenseHits          any
+	LexicalHits        any
+	SymbolHits         any
+	GraphHits          any
+	FusedHits          any
+	RerankedHits       any
+	PromptPreview      string
+	LatencyMS          int64
 }
 
 type RetrievalTrace struct {
-	ID             uuid.UUID       `json:"id"`
-	UserID         *uuid.UUID      `json:"user_id,omitempty"`
-	RepositoryID   uuid.UUID       `json:"repository_id"`
-	SnapshotID     *uuid.UUID      `json:"snapshot_id,omitempty"`
-	BranchName     string          `json:"branch_name"`
-	OriginalQuery  string          `json:"original_query"`
-	RewrittenQuery string          `json:"rewritten_query"`
-	TopK           int             `json:"top_k"`
-	DenseHits      json.RawMessage `json:"dense_hits"`
-	LexicalHits    json.RawMessage `json:"lexical_hits"`
-	SymbolHits     json.RawMessage `json:"symbol_hits"`
-	GraphHits      json.RawMessage `json:"graph_hits"`
-	FusedHits      json.RawMessage `json:"fused_hits"`
-	RerankedHits   json.RawMessage `json:"reranked_hits"`
-	PromptPreview  string          `json:"prompt_preview"`
-	LatencyMS      int64           `json:"latency_ms"`
-	CreatedAt      time.Time       `json:"created_at"`
+	ID                 uuid.UUID       `json:"id"`
+	UserID             *uuid.UUID      `json:"user_id,omitempty"`
+	RepositoryID       uuid.UUID       `json:"repository_id"`
+	SnapshotID         *uuid.UUID      `json:"snapshot_id,omitempty"`
+	BranchName         string          `json:"branch_name"`
+	QueryCategory      string          `json:"query_category"`
+	RetrievalPath      json.RawMessage `json:"retrieval_path"`
+	RetrievalConfig    json.RawMessage `json:"retrieval_config"`
+	RetrievedChunkIDs  []string        `json:"retrieved_chunk_ids"`
+	StageContributions json.RawMessage `json:"stage_contributions"`
+	ContextTokenCount  int             `json:"context_token_count"`
+	PromptVersion      string          `json:"prompt_version"`
+	GenerationModel    string          `json:"generation_model"`
+	EstimatedCostUSD   float64         `json:"estimated_cost_usd"`
+	OriginalQuery      string          `json:"original_query"`
+	RewrittenQuery     string          `json:"rewritten_query"`
+	TopK               int             `json:"top_k"`
+	DenseHits          json.RawMessage `json:"dense_hits"`
+	LexicalHits        json.RawMessage `json:"lexical_hits"`
+	SymbolHits         json.RawMessage `json:"symbol_hits"`
+	GraphHits          json.RawMessage `json:"graph_hits"`
+	FusedHits          json.RawMessage `json:"fused_hits"`
+	RerankedHits       json.RawMessage `json:"reranked_hits"`
+	PromptPreview      string          `json:"prompt_preview"`
+	LatencyMS          int64           `json:"latency_ms"`
+	CreatedAt          time.Time       `json:"created_at"`
 }
 
 func (s *Store) CreateRepository(ctx context.Context, input CreateRepositoryInput) (codeintel.Repository, error) {
@@ -294,16 +312,20 @@ func (s *Store) CreateRetrievalTrace(ctx context.Context, input RetrievalTraceIn
 INSERT INTO repo_retrieval_traces (
     id, user_id, repository_id, snapshot_id, branch_name, original_query, rewritten_query, top_k,
     reranker_enabled, dense_hits, lexical_hits, symbol_hits, graph_hits, fused_hits, reranked_hits,
-    prompt_preview, latency_ms
+    prompt_preview, latency_ms, query_category, retrieval_path, retrieval_config, retrieved_chunk_ids,
+    stage_contributions, context_token_count, prompt_version, generation_model, estimated_cost_usd
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12, $13, $14, $15,
-    $16, $17
+    $16, $17, $18, $19, $20, $21,
+    $22, $23, $24, $25, $26
 )
 `, id, nullableUUID(input.UserID), input.RepositoryID, nullableUUID(input.SnapshotID), input.BranchName,
 		input.OriginalQuery, input.RewrittenQuery, input.TopK, input.RerankerEnabled,
 		mustJSON(input.DenseHits), mustJSON(input.LexicalHits), mustJSON(input.SymbolHits), mustJSON(input.GraphHits),
-		mustJSON(input.FusedHits), mustJSON(input.RerankedHits), input.PromptPreview, input.LatencyMS)
+		mustJSON(input.FusedHits), mustJSON(input.RerankedHits), input.PromptPreview, input.LatencyMS,
+		input.QueryCategory, mustJSON(input.RetrievalPath), mustJSON(input.RetrievalConfig), uuidStrings(input.RetrievedChunkIDs),
+		mustJSON(input.StageContributions), input.ContextTokenCount, input.PromptVersion, input.GenerationModel, input.EstimatedCostUSD)
 	return id, err
 }
 
@@ -311,14 +333,15 @@ func (s *Store) GetRetrievalTrace(ctx context.Context, id uuid.UUID) (RetrievalT
 	row := s.pool.QueryRow(ctx, `
 SELECT id, user_id, repository_id, snapshot_id, branch_name, original_query, rewritten_query, top_k,
        dense_hits, lexical_hits, symbol_hits, graph_hits, fused_hits, reranked_hits,
-       prompt_preview, latency_ms, created_at
+       prompt_preview, latency_ms, query_category, retrieval_path, retrieval_config, retrieved_chunk_ids,
+       stage_contributions, context_token_count, prompt_version, generation_model, estimated_cost_usd, created_at
 FROM repo_retrieval_traces
 WHERE id = $1
 `, id)
 	var trace RetrievalTrace
 	var userID pgtype.UUID
 	var snapshotID pgtype.UUID
-	if err := row.Scan(&trace.ID, &userID, &trace.RepositoryID, &snapshotID, &trace.BranchName, &trace.OriginalQuery, &trace.RewrittenQuery, &trace.TopK, &trace.DenseHits, &trace.LexicalHits, &trace.SymbolHits, &trace.GraphHits, &trace.FusedHits, &trace.RerankedHits, &trace.PromptPreview, &trace.LatencyMS, &trace.CreatedAt); err != nil {
+	if err := row.Scan(&trace.ID, &userID, &trace.RepositoryID, &snapshotID, &trace.BranchName, &trace.OriginalQuery, &trace.RewrittenQuery, &trace.TopK, &trace.DenseHits, &trace.LexicalHits, &trace.SymbolHits, &trace.GraphHits, &trace.FusedHits, &trace.RerankedHits, &trace.PromptPreview, &trace.LatencyMS, &trace.QueryCategory, &trace.RetrievalPath, &trace.RetrievalConfig, &trace.RetrievedChunkIDs, &trace.StageContributions, &trace.ContextTokenCount, &trace.PromptVersion, &trace.GenerationModel, &trace.EstimatedCostUSD, &trace.CreatedAt); err != nil {
 		return RetrievalTrace{}, err
 	}
 	trace.UserID = uuidPtr(userID)
@@ -494,6 +517,16 @@ func nullableUUIDPtr(id *uuid.UUID) pgtype.UUID {
 		return pgtype.UUID{Valid: false}
 	}
 	return pgtype.UUID{Bytes: *id, Valid: true}
+}
+
+func uuidStrings(ids []uuid.UUID) []string {
+	values := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != uuid.Nil {
+			values = append(values, id.String())
+		}
+	}
+	return values
 }
 
 func nullableTime(t time.Time) pgtype.Timestamptz {

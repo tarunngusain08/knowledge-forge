@@ -15,9 +15,11 @@ Index repository
 -> Generate impact analysis
 ```
 
-Phase 12 implements the first half of that workflow: import/index one
-repository snapshot and answer repository questions with cited file evidence.
-Planning and impact analysis are intentionally deferred.
+The current repository-intelligence path can import/index one repository
+snapshot, answer repository questions with cited file evidence, classify the
+query, choose an adaptive retrieval budget, assemble context under a token
+budget, and persist answer provenance for debugging and evaluation. Planning and
+impact analysis are intentionally deferred.
 
 ## Target Retrieval Flow
 
@@ -48,21 +50,27 @@ Repository
         └── Graph
 ```
 
-Phase 12 retrieval contract:
+Repository Q&A retrieval contract:
 
 ```text
 repository question
+-> query classification
+-> adaptive retrieval budget
 -> Vertex/mock query embedding
 -> Pinecone dense retrieval scoped to repository snapshot
--> optional reranking
+-> gated reranking
+-> context assembly under token budget
 -> Gemini/mock grounded answer
 -> citations with repository, branch, commit SHA, file path, and line range
 ```
 
 The MVP includes repository registration, safe file walking, code chunking,
 embedding/upsert, dense retrieval, retrieval traces, and worker/API job
-processing. It does not enable graph retrieval, implementation planning, impact
-analysis, PR review, diagrams, multi-repo intelligence, or repository memory.
+processing. Phase 14 adds adaptive query policy, context compression, retrieved
+chunk provenance, stage contribution tracking, and estimated generation cost in
+repository retrieval traces. It does not enable graph retrieval, implementation
+planning, impact analysis, PR review, diagrams, multi-repo intelligence, or
+repository memory.
 
 ## Local Development
 
