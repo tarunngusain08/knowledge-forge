@@ -90,6 +90,21 @@ The API exposes `GET /healthz` on port `8080`.
 The React/Vite product UI runs on port `8501` when using Docker Compose.
 The older Streamlit demo remains under `ui/streamlit` as a fallback.
 
+## Git Deliverable Commits
+
+Knowledge Forge includes a local commit-planning CLI:
+
+```bash
+go run ./cmd/git-deliverable-commits --dry-run
+go run ./cmd/git-deliverable-commits --interactive
+go run ./cmd/git-deliverable-commits --interactive --execute
+```
+
+`git-deliverable-commits` analyzes staged, unstaged, and untracked changes in
+the current Git worktree, groups files into logical deliverables, proposes
+conventional commit messages, and asks for confirmation before creating commits.
+It never pushes, amends, rewrites history, or creates empty commits.
+
 ## API Surface
 
 - `POST /auth/login`
@@ -157,4 +172,5 @@ python3 eval-runner/repo_benchmark_runner.py \
 - [Cloud Run Deployment](deploy/cloud-run.md)
 - [Storage Notes](docs/storage.md)
 - [Evaluation](docs/evaluation.md)
+- [Git Deliverable Commits](docs/git-deliverable-commits.md)
 - [Future Multi-Tenancy](docs/multitenancy.md)

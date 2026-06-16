@@ -13,6 +13,6 @@
 - [Architecture](architecture.md)
 - [Implementation Plan](implementation-plan.md)
 - [Evaluation](evaluation.md)
+- [Git Deliverable Commits](git-deliverable-commits.md)
 - [Storage Notes](storage.md)
 - [Future Multi-Tenancy](multitenancy.md)
-
