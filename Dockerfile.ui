@@ -1,8 +1,18 @@
-FROM python:3.13-slim
-WORKDIR /app
-COPY ui/streamlit/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY ui/streamlit/app.py .
-EXPOSE 8501
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.address=0.0.0.0"]
+FROM node:24-alpine AS build
 
+WORKDIR /app
+COPY ui/web/package*.json ./
+RUN npm ci
+
+COPY ui/web/ ./
+ARG VITE_API_BASE_URL=http://localhost:8080
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
+
+FROM node:24-alpine
+
+WORKDIR /app
+RUN npm install -g serve@14.2.5
+COPY --from=build /app/dist ./dist
+EXPOSE 8501
+ENTRYPOINT ["serve", "-s", "dist", "-l", "8501"]

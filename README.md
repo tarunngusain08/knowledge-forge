@@ -84,7 +84,8 @@ docker compose up --build
 
 The API exposes `GET /healthz` on port `8080`.
 
-The Streamlit demo UI runs on port `8501` when using Docker Compose.
+The React/Vite product UI runs on port `8501` when using Docker Compose.
+The older Streamlit demo remains under `ui/streamlit` as a fallback.
 
 ## API Surface
 
@@ -107,6 +108,7 @@ The Streamlit demo UI runs on port `8501` when using Docker Compose.
 - `GET /v1/ingestions/{job_id}`
 - `POST /v1/ask`
 - `GET /v1/retrieval-traces/{trace_id}`
+- `POST /v1/feedback`
 - `POST /internal/repository-jobs/{job_id}/process`
 
 ## Validation
@@ -116,6 +118,7 @@ make test
 make vet
 python3 -m pytest eval-runner
 python3 -m py_compile ui/streamlit/app.py
+cd ui/web && npm test && npm run lint && npm run build
 ```
 
 Repository benchmark fixture:

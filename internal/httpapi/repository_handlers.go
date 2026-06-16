@@ -191,3 +191,47 @@ func (s *Server) handleGetRepositoryRetrievalTrace(w http.ResponseWriter, r *htt
 	}
 	writeJSON(w, http.StatusOK, trace)
 }
+
+type repositoryFeedbackRequest struct {
+	TraceID            uuid.UUID `json:"trace_id"`
+	AnswerCorrect     bool      `json:"answer_correct"`
+	CitationCorrect   bool      `json:"citation_correct"`
+	MissingFile       bool      `json:"missing_file"`
+	MissingSymbol     bool      `json:"missing_symbol"`
+	HallucinatedClaim bool      `json:"hallucinated_claim"`
+	ShouldHaveRefused bool      `json:"should_have_refused"`
+	ReviewerNote      string    `json:"reviewer_note"`
+}
+
+func (s *Server) handleCreateRepositoryFeedback(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
+	var req repositoryFeedbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if req.TraceID == uuid.Nil {
+		writeError(w, http.StatusBadRequest, "trace_id is required")
+		return
+	}
+	feedback, err := s.repoStore.CreateFeedback(r.Context(), repositories.CreateFeedbackInput{
+		UserID:             user.ID,
+		TraceID:            req.TraceID,
+		AnswerCorrect:      req.AnswerCorrect,
+		CitationCorrect:    req.CitationCorrect,
+		MissingFile:        req.MissingFile,
+		MissingSymbol:      req.MissingSymbol,
+		HallucinatedClaim:  req.HallucinatedClaim,
+		ShouldHaveRefused: req.ShouldHaveRefused,
+		ReviewerNote:      req.ReviewerNote,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, feedback)
+}

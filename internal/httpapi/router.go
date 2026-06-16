@@ -98,6 +98,7 @@ func NewRouter(deps Dependencies) http.Handler {
 			}
 			if deps.RepositoryStore != nil {
 				protected.Get("/v1/retrieval-traces/{trace_id}", server.handleGetRepositoryRetrievalTrace)
+				protected.Post("/v1/feedback", server.handleCreateRepositoryFeedback)
 			}
 		})
 	}
