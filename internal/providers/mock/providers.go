@@ -75,9 +75,12 @@ func (v *VectorStore) UpsertChunks(_ context.Context, records []rag.VectorRecord
 	return nil
 }
 
-func (v *VectorStore) Search(_ context.Context, vector []float32, topK int, _ map[string]any) ([]rag.RetrievalHit, error) {
+func (v *VectorStore) Search(_ context.Context, vector []float32, topK int, filter map[string]any) ([]rag.RetrievalHit, error) {
 	hits := make([]rag.RetrievalHit, 0, len(v.Records))
 	for _, record := range v.Records {
+		if !matchesFilter(record.Metadata, filter) {
+			continue
+		}
 		chunk := rag.Chunk{VectorID: record.ID, Metadata: record.Metadata}
 		if v.Chunks != nil {
 			if stored, ok := v.Chunks[record.ID]; ok {
@@ -97,6 +100,21 @@ func (v *VectorStore) Search(_ context.Context, vector []float32, topK int, _ ma
 		hits = hits[:topK]
 	}
 	return hits, nil
+}
+
+func matchesFilter(metadata map[string]any, filter map[string]any) bool {
+	for key, condition := range filter {
+		want := ""
+		if eq, ok := condition.(map[string]any); ok {
+			want = fmt.Sprint(eq["$eq"])
+		} else {
+			want = fmt.Sprint(condition)
+		}
+		if want != "" && fmt.Sprint(metadata[key]) != want {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *VectorStore) DeleteDocument(_ context.Context, documentID uuid.UUID) error {
@@ -138,27 +156,20 @@ type LLM struct {
 func (l LLM) GenerateAnswer(_ context.Context, req rag.GenerateRequest) (rag.GenerateResponse, error) {
 	if len(req.Context) == 0 {
 		return rag.GenerateResponse{
-			Answer: "I could not find this in the uploaded documents.",
+			Answer: "I could not find this in the indexed context.",
 			Model:  l.model(),
 		}, nil
 	}
 	citations := make([]rag.Citation, 0, len(req.Context))
 	for _, hit := range req.Context {
-		citations = append(citations, rag.Citation{
-			ChunkID:     hit.Chunk.ID,
-			DocumentID:  hit.Chunk.DocumentID,
-			Document:    fmt.Sprint(hit.Chunk.Metadata["filename"]),
-			PageNumber:  hit.Chunk.PageNumber,
-			Excerpt:     excerpt(hit.Chunk.Content, 240),
-			DenseScore:  hit.DenseScore,
-			LexicalRank: hit.LexicalRank,
-			FusedRank:   hit.FusedRank,
-			RerankScore: hit.RerankScore,
-			Metadata:    hit.Chunk.Metadata,
-		})
+		citations = append(citations, rag.CitationFromHit(hit, excerpt(hit.Chunk.Content, 240)))
+	}
+	prefix := "Based on the indexed context: "
+	if fmt.Sprint(req.Context[0].Chunk.Metadata["path"]) == "" || fmt.Sprint(req.Context[0].Chunk.Metadata["path"]) == "<nil>" {
+		prefix = "Based on the uploaded documents: "
 	}
 	return rag.GenerateResponse{
-		Answer:       "Based on the uploaded documents: " + excerpt(req.Context[0].Chunk.Content, 300),
+		Answer:       prefix + excerpt(req.Context[0].Chunk.Content, 300),
 		InputTokens:  len(strings.Fields(req.Query)),
 		OutputTokens: len(strings.Fields(req.Context[0].Chunk.Content)),
 		Model:        l.model(),

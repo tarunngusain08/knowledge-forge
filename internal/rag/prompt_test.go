@@ -18,10 +18,10 @@ func TestBuildGroundedPromptIsolatesUntrustedContext(t *testing.T) {
 	if !strings.Contains(prompt, "untrusted data") {
 		t.Fatal("expected prompt injection warning")
 	}
-	if !strings.Contains(prompt, "<untrusted_document_text>") {
+	if !strings.Contains(prompt, "<untrusted_context>") {
 		t.Fatal("expected context isolation tags")
 	}
-	if !strings.Contains(prompt, "I could not find this in the uploaded documents") {
+	if !strings.Contains(prompt, "I could not find this in the indexed context") {
 		t.Fatal("expected refusal instruction")
 	}
 }
