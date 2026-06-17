@@ -5,7 +5,7 @@
 Knowledge Forge is an evidence-grounded RAG and repository-intelligence system.
 It turns documents and repository snapshots into searchable chunks, retrieves
 relevant evidence for user questions, and uses Gemini to produce cited answers,
-implementation plans, and impact analyses.
+deep-dive reports, implementation plans, and impact analyses.
 
 ```mermaid
 flowchart LR
@@ -59,8 +59,8 @@ flowchart TB
 Purpose:
 
 - Provides the primary product frontend for repository import, Q&A, cited
-  evidence, implementation planning, impact analysis, debug traces, and
-  feedback.
+  evidence, deep-dive reports, implementation planning, impact analysis, debug
+  traces, and feedback.
 
 Why it exists:
 
@@ -76,7 +76,8 @@ Purpose:
 
 - Owns HTTP routing, auth, document APIs, chat APIs, debug endpoints, and eval
   endpoints.
-- Exposes repository workflow endpoints for Q&A, planning, and impact analysis.
+- Exposes repository workflow endpoints for Q&A, deep-dive reports, planning,
+  and impact analysis.
 
 Why it exists:
 
@@ -86,6 +87,25 @@ Why it exists:
 If removed:
 
 - No stable API surface; UI and workers would have no coordination point.
+
+### Code Q&A Service
+
+Purpose:
+
+- Owns repository Q&A, deep-dive report generation, implementation planning,
+  impact analysis, evidence-derived confidence, and Markdown report export.
+- Reuses the repository retrieval path rather than introducing a separate agent
+  system for reports.
+
+Why it exists:
+
+- Keeps repository intelligence business logic in one backend service with
+  citations, traces, provenance, and provider abstractions.
+
+If removed:
+
+- The API could still index repositories, but it could not produce cited
+  repository answers, reports, plans, or impact analyses.
 
 ### Indexing Worker
 

@@ -102,6 +102,7 @@ func NewRouter(deps Dependencies) http.Handler {
 				protected.Post("/v1/ask", server.handleRepositoryAsk)
 				protected.Post("/v1/plans", server.handleGenerateImplementationPlan)
 				protected.Post("/v1/impact", server.handleAnalyzeImpact)
+				protected.Post("/v1/reports/deep-dive", server.handleGenerateDeepDiveReport)
 			}
 			if deps.RepositoryStore != nil {
 				protected.Get("/v1/retrieval-traces/{trace_id}", server.handleGetRepositoryRetrievalTrace)

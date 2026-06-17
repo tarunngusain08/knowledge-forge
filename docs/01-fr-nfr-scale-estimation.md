@@ -2,9 +2,10 @@
 
 ## Scope
 
-Knowledge Forge is a production-style company-document RAG assistant. Users upload
-trusted company documents, the system indexes them asynchronously, and users ask
-questions that are answered by Gemini using retrieved evidence and citations.
+Knowledge Forge is a production-style evidence-grounded knowledge assistant.
+Users can upload trusted company documents or index repository snapshots. The
+system retrieves cited evidence and uses Gemini to answer questions, generate
+repository deep-dive reports, and produce read-only planning/impact workflows.
 
 ## Functional Requirements
 
@@ -95,6 +96,27 @@ questions that are answered by Gemini using retrieved evidence and citations.
   - context precision,
   - context recall.
 
+### Repository Deep-Dive Reports
+
+- Generate an on-demand repository deep-dive report for one repository snapshot.
+- Start report generation with one shared broad evidence pass.
+- Run at most four targeted follow-up retrievals for weak/high-value sections.
+- Return report JSON and downloadable Markdown.
+- Include:
+  - architecture overview,
+  - entry points,
+  - main packages,
+  - authentication flow,
+  - data layer,
+  - external services,
+  - testing strategy,
+  - risk areas,
+  - suggested improvements,
+  - missing context,
+  - evidence quality.
+- Every report claim must be backed by citations or placed under missing
+  context.
+
 ### Cost and Token Tracking
 
 - Track provider, model, operation, input tokens, output tokens, and estimated
@@ -124,6 +146,8 @@ questions that are answered by Gemini using retrieved evidence and citations.
 - Dense and lexical retrieval should be independently optimizable.
 - Reranking should be configurable because it improves precision but adds
   latency.
+- Repository reports should avoid one full RAG pipeline per section by using a
+  shared evidence pass before targeted retrieval.
 
 ### Scalability
 
@@ -274,4 +298,3 @@ Long term:
 - Add offline evaluation pipelines.
 - Add SLO dashboards for retrieval latency, answer latency, failure rate, and
   cost per answer.
-
