@@ -109,21 +109,36 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 	retrieval.ContextTokenCount = assembly.TokenCount
 	retrieval.RetrievedChunkIDs = retrievedChunkIDs(assembly.Hits)
 	retrieval.StageContributions = withContextContribution(retrieval.StageContributions, len(assembly.Hits))
-	generation, err := s.llm.GenerateAnswer(ctx, rag.GenerateRequest{
-		Query:          req.Question,
-		RewrittenQuery: rewritten,
-		Context:        assembly.Hits,
-	})
-	if err != nil {
-		return AskResponse{}, fmt.Errorf("generate repository answer: %w", err)
+	support := evaluateAnswerSupport(req.Question, policy.Category, assembly.Hits)
+	policy.Config = retrievalConfigWithSupportGate(policy.Config, support)
+	retrieval.RetrievalConfig = policy.Config
+
+	generation := rag.GenerateResponse{
+		Answer:    refusalAnswer,
+		Model:     "support-gate",
+		Citations: []rag.Citation{},
 	}
-	cost := costs.EstimateUSD(costs.Usage{
-		Provider:     "vertex",
-		Model:        generation.Model,
-		Operation:    "generate",
-		InputTokens:  generation.InputTokens,
-		OutputTokens: generation.OutputTokens,
-	})
+	var cost float64
+	if support.Answerable {
+		generation, err = s.llm.GenerateAnswer(ctx, rag.GenerateRequest{
+			Query:          req.Question,
+			RewrittenQuery: rewritten,
+			Context:        assembly.Hits,
+		})
+		if err != nil {
+			return AskResponse{}, fmt.Errorf("generate repository answer: %w", err)
+		}
+		if generation.Citations == nil {
+			generation.Citations = []rag.Citation{}
+		}
+		cost = costs.EstimateUSD(costs.Usage{
+			Provider:     "vertex",
+			Model:        generation.Model,
+			Operation:    "generate",
+			InputTokens:  generation.InputTokens,
+			OutputTokens: generation.OutputTokens,
+		})
+	}
 	traceID, err := s.repos.CreateRetrievalTrace(ctx, repositories.RetrievalTraceInput{
 		UserID:             req.UserID,
 		RepositoryID:       req.RepositoryID,
@@ -149,12 +164,12 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 		FusedHits:          retrieval.FusedHits,
 		RerankedHits:       retrieval.RerankedHits,
 		PromptPreview:      rag.BuildGroundedPrompt(rag.GenerateRequest{RewrittenQuery: rewritten, Context: assembly.Hits}),
-		LatencyMS:          retrieval.Latency.Milliseconds(),
+		LatencyMS:          retrieval.LatencyMilliseconds(),
 	})
 	if err != nil {
 		return AskResponse{}, fmt.Errorf("create retrieval trace: %w", err)
 	}
-	if s.costs != nil {
+	if s.costs != nil && support.Answerable {
 		_, _ = s.costs.CreateTokenCostEvent(ctx, db.CreateTokenCostEventParams{
 			UserID:           nullableUUID(req.UserID),
 			Provider:         "vertex",

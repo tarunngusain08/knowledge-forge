@@ -326,7 +326,7 @@ func citationFiles(citations []rag.Citation) []string {
 		files = append(files, path)
 	}
 	sort.Strings(files)
-	return files
+	return nonNilStrings(files)
 }
 
 func citationSymbols(citations []rag.Citation) []string {
@@ -343,7 +343,7 @@ func citationSymbols(citations []rag.Citation) []string {
 		}
 	}
 	sort.Strings(symbols)
-	return symbols
+	return nonNilStrings(symbols)
 }
 
 func testFiles(citations []rag.Citation) []string {

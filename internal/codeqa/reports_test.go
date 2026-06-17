@@ -20,6 +20,7 @@ func TestBuildDeepDiveReportResponseIncludesEvidenceQualityAndMarkdown(t *testin
 		Citations: []rag.Citation{
 			reportCitation(repoID, snapshotID, "cmd/api/main.go", 12, 40, "abc123", "api entrypoint"),
 			reportCitation(repoID, snapshotID, "internal/retrieval/code_service.go", 20, 80, "abc123", "repository retrieval"),
+			reportCitation(repoID, snapshotID, "ui/web/src/App.tsx", 100, 180, "abc123", "demo mode UI"),
 		},
 		TraceID: sharedTraceID,
 		Provenance: AnswerProvenance{
@@ -47,14 +48,26 @@ func TestBuildDeepDiveReportResponseIncludesEvidenceQualityAndMarkdown(t *testin
 	if report.Summary == "" || !strings.Contains(report.Summary, "abc123") {
 		t.Fatalf("summary = %q", report.Summary)
 	}
-	if report.EvidenceQuality.FilesExamined != 2 {
+	if report.EvidenceQuality.FilesExamined != 3 {
 		t.Fatalf("files examined = %d", report.EvidenceQuality.FilesExamined)
 	}
-	if report.EvidenceQuality.CitationCount != 3 {
+	if report.EvidenceQuality.CitationCount != 4 {
 		t.Fatalf("citation count = %d", report.EvidenceQuality.CitationCount)
+	}
+	if report.EvidenceQuality.CitedSymbols == nil || report.TraceIDs == nil {
+		t.Fatalf("report should normalize nullable arrays: quality=%#v traces=%#v", report.EvidenceQuality, report.TraceIDs)
 	}
 	if len(report.TraceIDs) != 2 {
 		t.Fatalf("trace ids = %#v", report.TraceIDs)
+	}
+	overview := strings.Join(report.Sections[0].Findings, "\n")
+	for _, want := range []string{"API layer", "retrieval/RAG layer", "UI layer"} {
+		if !strings.Contains(overview, want) {
+			t.Fatalf("architecture overview missing %q:\n%s", want, overview)
+		}
+	}
+	if report.Sections[0].Evidence == nil || report.Sections[0].Citations == nil {
+		t.Fatalf("section should normalize nullable arrays: %#v", report.Sections[0])
 	}
 	if !strings.Contains(report.Markdown, "# Repository Deep-Dive Report") {
 		t.Fatalf("markdown missing title:\n%s", report.Markdown)
@@ -91,6 +104,43 @@ func TestBuildDeepDiveReportResponseKeepsUnsupportedSectionsInMissingContext(t *
 	}
 	if !strings.Contains(report.Markdown, "No cited repository evidence was retrieved") {
 		t.Fatalf("markdown missing refusal context:\n%s", report.Markdown)
+	}
+}
+
+func TestBuildDeepDiveReportResponseImprovesEvidenceCoverageFromAuditBaseline(t *testing.T) {
+	repoID := uuid.New()
+	snapshotID := uuid.New()
+	shared := AskResponse{
+		Answer: "Based on the indexed context: Knowledge Forge contains API, retrieval, UI, data, indexing, provider, evaluation, and deployment layers.",
+		Citations: []rag.Citation{
+			reportCitation(repoID, snapshotID, "cmd/api/main.go", 1, 40, "abc123", "api"),
+			reportCitation(repoID, snapshotID, "internal/retrieval/code_service.go", 1, 80, "abc123", "retrieval"),
+			reportCitation(repoID, snapshotID, "ui/web/src/App.tsx", 1, 80, "abc123", "ui"),
+			reportCitation(repoID, snapshotID, "internal/db/queries.go", 1, 80, "abc123", "database"),
+			reportCitation(repoID, snapshotID, "cmd/worker/main.go", 1, 80, "abc123", "worker"),
+		},
+		TraceID: uuid.New(),
+		Provenance: AnswerProvenance{
+			RepositoryID:      repoID,
+			BranchName:        "main",
+			SnapshotID:        snapshotID,
+			CommitSHA:         "abc123",
+			ContextTokenCount: 900,
+		},
+		Model: "mock-llm",
+	}
+	var asks []reportSectionAsk
+	for _, spec := range deepDiveReportSectionSpecs() {
+		asks = append(asks, reportSectionAsk{spec: spec, ask: shared, targeted: spec.TargetedByV1})
+	}
+
+	report := buildDeepDiveReportResponse(shared, asks, time.Now())
+
+	if report.EvidenceQuality.EvidenceCoverage < 0.70 {
+		t.Fatalf("evidence coverage = %.2f", report.EvidenceQuality.EvidenceCoverage)
+	}
+	if report.EvidenceQuality.EvidenceCoverage < 0.56*1.25 {
+		t.Fatalf("evidence coverage did not improve 25%% from audit baseline: %.2f", report.EvidenceQuality.EvidenceCoverage)
 	}
 }
 

@@ -88,7 +88,7 @@ export type EvidenceConfidence = {
   evidence_coverage: number;
   citation_count: number;
   context_token_count: number;
-  reasons: string[];
+  reasons: string[] | null;
 };
 
 export type ImplementationPlanResponse = {
@@ -125,11 +125,11 @@ export type ImpactAnalysisResponse = {
 export type DeepDiveReportSection = {
   id: string;
   title: string;
-  findings: string[];
-  missing_context: string[];
-  evidence: EvidenceItem[];
-  citations: Citation[];
-  confidence: EvidenceConfidence;
+  findings: string[] | null;
+  missing_context: string[] | null;
+  evidence: EvidenceItem[] | null;
+  citations: Citation[] | null;
+  confidence: EvidenceConfidence | null;
   trace_id?: string;
   targeted: boolean;
   answer?: string;
@@ -137,19 +137,19 @@ export type DeepDiveReportSection = {
 
 export type DeepDiveEvidenceQuality = {
   files_examined: number;
-  cited_files: string[];
-  cited_symbols: string[];
+  cited_files: string[] | null;
+  cited_symbols: string[] | null;
   citation_count: number;
   evidence_coverage: number;
-  missing_context: string[];
-  confidence: EvidenceConfidence;
+  missing_context: string[] | null;
+  confidence: EvidenceConfidence | null;
 };
 
 export type DeepDiveReportResponse = {
   summary: string;
-  sections: DeepDiveReportSection[];
-  evidence_quality: DeepDiveEvidenceQuality;
-  trace_ids: string[];
+  sections: DeepDiveReportSection[] | null;
+  evidence_quality: DeepDiveEvidenceQuality | null;
+  trace_ids: string[] | null;
   provenance: AskResponse["provenance"];
   model: string;
   generated_at: string;

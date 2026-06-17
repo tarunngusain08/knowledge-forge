@@ -138,7 +138,15 @@ type RetrievalResult struct {
 	ContextTokenCount  int            `json:"context_token_count,omitempty"`
 	RetrievedChunkIDs  []uuid.UUID    `json:"retrieved_chunk_ids,omitempty"`
 	StageContributions map[string]int `json:"stage_contributions,omitempty"`
-	Latency            time.Duration  `json:"latency"`
+	Latency            time.Duration  `json:"-"`
+	LatencyMS          int64          `json:"latency_ms"`
+}
+
+func (r RetrievalResult) LatencyMilliseconds() int64 {
+	if r.LatencyMS > 0 {
+		return r.LatencyMS
+	}
+	return r.Latency.Milliseconds()
 }
 
 type LLMProvider interface {

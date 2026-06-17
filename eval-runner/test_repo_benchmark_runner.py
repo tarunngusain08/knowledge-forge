@@ -1,4 +1,4 @@
-from repo_benchmark_runner import comparison_summary, metrics
+from repo_benchmark_runner import comparison_summary, latency_ms, metrics
 
 
 def test_repository_metrics_include_failure_quality() -> None:
@@ -33,6 +33,7 @@ def test_repository_metrics_include_failure_quality() -> None:
     assert output["symbol_coverage"] == 1.0
     assert output["line_range_accuracy"] == 1.0
     assert output["refusal_accuracy"] == 1.0
+    assert output["answerable_question_accuracy"] == 1.0
 
 
 def test_comparison_summary_reports_quality_latency_cost_and_stages() -> None:
@@ -67,3 +68,8 @@ def test_comparison_summary_reports_quality_latency_cost_and_stages() -> None:
     assert output["metric_delta"]["file_coverage"] > 0
     assert output["metric_delta"]["avg_latency_ms"] == 30
     assert output["stage_contribution_delta"]["symbol"] == 1
+
+
+def test_latency_prefers_explicit_milliseconds_and_converts_legacy_nanoseconds() -> None:
+    assert latency_ms({"latency_ms": 623.18, "latency": 999999999}) == 623.18
+    assert latency_ms({"latency": 623180}) == 0.62318

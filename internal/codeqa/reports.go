@@ -104,10 +104,9 @@ func (s *Service) GenerateDeepDiveReport(ctx context.Context, req WorkflowReques
 			continue
 		}
 		sectionAsks = append(sectionAsks, reportSectionAsk{
-			spec:        spec,
-			ask:         shared,
-			targeted:    false,
-			missingOnly: true,
+			spec:     spec,
+			ask:      shared,
+			targeted: false,
 		})
 	}
 
@@ -192,14 +191,14 @@ func buildDeepDiveReportResponse(shared AskResponse, sectionAsks []reportSection
 
 func buildDeepDiveReportSection(input reportSectionAsk) DeepDiveReportSection {
 	missing := deepDiveSectionMissingContext(input)
-	findings := deepDiveFindings(input.ask, input.missingOnly)
+	findings := deepDiveFindingsForSection(input)
 	return DeepDiveReportSection{
 		ID:             input.spec.ID,
 		Title:          input.spec.Title,
-		Findings:       findings,
-		MissingContext: missing,
-		Evidence:       evidenceItems(input.ask.Citations),
-		Citations:      input.ask.Citations,
+		Findings:       nonNilStrings(findings),
+		MissingContext: nonNilStrings(missing),
+		Evidence:       nonNilEvidenceItems(evidenceItems(input.ask.Citations)),
+		Citations:      nonNilCitations(input.ask.Citations),
 		Confidence:     confidenceFromEvidence(input.ask, missing),
 		TraceID:        input.ask.TraceID,
 		Targeted:       input.targeted,
@@ -208,6 +207,9 @@ func buildDeepDiveReportSection(input reportSectionAsk) DeepDiveReportSection {
 }
 
 func deepDiveSectionMissingContext(input reportSectionAsk) []string {
+	if input.spec.ID == "architecture_overview" && len(architectureFindingsFromCitations(input.ask.Citations)) == 0 && len(input.ask.Citations) > 0 {
+		return []string{"Architecture overview did not find enough code-structure evidence; docs may support but cannot define architecture by themselves."}
+	}
 	if input.missingOnly {
 		return []string{"This section did not receive targeted retrieval in v1; the shared evidence pass was insufficient to make section-specific claims."}
 	}
@@ -224,12 +226,77 @@ func deepDiveSectionMissingContext(input reportSectionAsk) []string {
 	return missing
 }
 
+func deepDiveFindingsForSection(input reportSectionAsk) []string {
+	if input.spec.ID == "architecture_overview" {
+		return architectureFindingsFromCitations(input.ask.Citations)
+	}
+	return deepDiveFindings(input.ask, input.missingOnly)
+}
+
 func deepDiveFindings(ask AskResponse, missingOnly bool) []string {
 	answer := strings.TrimSpace(ask.Answer)
 	if missingOnly || answer == "" || unsupportedAnswer(answer) || len(ask.Citations) == 0 {
-		return nil
+		return []string{}
 	}
 	return []string{answer}
+}
+
+func architectureFindingsFromCitations(citations []rag.Citation) []string {
+	layerEvidence := map[string]string{}
+	for _, citation := range citations {
+		path := strings.TrimSpace(citation.Path)
+		if path == "" {
+			continue
+		}
+		label := architectureLayerForPath(path)
+		if label == "" || layerEvidence[label] != "" {
+			continue
+		}
+		layerEvidence[label] = path
+	}
+	order := []string{
+		"API layer",
+		"retrieval/RAG layer",
+		"UI layer",
+		"data layer",
+		"indexing/worker layer",
+		"provider integration layer",
+		"evaluation layer",
+		"deployment layer",
+	}
+	findings := make([]string, 0, len(layerEvidence))
+	for _, label := range order {
+		path := layerEvidence[label]
+		if path == "" {
+			continue
+		}
+		findings = append(findings, fmt.Sprintf("Repository structure identifies the %s through `%s`.", label, path))
+	}
+	return findings
+}
+
+func architectureLayerForPath(path string) string {
+	normalized := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(path)), "./")
+	switch {
+	case strings.HasPrefix(normalized, "cmd/api/") || strings.HasPrefix(normalized, "internal/http") || strings.HasPrefix(normalized, "internal/api"):
+		return "API layer"
+	case strings.HasPrefix(normalized, "internal/rag/") || strings.HasPrefix(normalized, "internal/retrieval/") || strings.HasPrefix(normalized, "internal/codeqa/"):
+		return "retrieval/RAG layer"
+	case strings.HasPrefix(normalized, "ui/web/") || strings.HasPrefix(normalized, "ui/streamlit/"):
+		return "UI layer"
+	case strings.HasPrefix(normalized, "internal/db/") || strings.HasPrefix(normalized, "internal/repositories/") || strings.HasPrefix(normalized, "migrations/") || strings.HasPrefix(normalized, "queries/"):
+		return "data layer"
+	case strings.HasPrefix(normalized, "cmd/worker/") || strings.HasPrefix(normalized, "internal/indexing/") || strings.HasPrefix(normalized, "internal/worker"):
+		return "indexing/worker layer"
+	case strings.HasPrefix(normalized, "internal/providers/"):
+		return "provider integration layer"
+	case strings.HasPrefix(normalized, "internal/evaluation/") || strings.HasPrefix(normalized, "eval-runner/"):
+		return "evaluation layer"
+	case strings.HasPrefix(normalized, "deploy/") || strings.HasPrefix(normalized, ".github/") || strings.HasPrefix(normalized, "docker"):
+		return "deployment layer"
+	default:
+		return ""
+	}
 }
 
 func buildDeepDiveMissingContextSection(shared AskResponse, sections []DeepDiveReportSection) DeepDiveReportSection {
@@ -242,8 +309,10 @@ func buildDeepDiveMissingContextSection(shared AskResponse, sections []DeepDiveR
 	return DeepDiveReportSection{
 		ID:             "missing_context",
 		Title:          "Missing Context",
-		Findings:       missing,
-		MissingContext: missing,
+		Findings:       nonNilStrings(missing),
+		MissingContext: nonNilStrings(missing),
+		Evidence:       []EvidenceItem{},
+		Citations:      []rag.Citation{},
 		Confidence: EvidenceConfidence{
 			Label:             "Medium",
 			Score:             0.5,
@@ -293,11 +362,11 @@ func buildDeepDiveEvidenceQuality(sections []DeepDiveReportSection) DeepDiveEvid
 	}
 	return DeepDiveEvidenceQuality{
 		FilesExamined:    len(files),
-		CitedFiles:       files,
-		CitedSymbols:     symbols,
+		CitedFiles:       nonNilStrings(files),
+		CitedSymbols:     nonNilStrings(symbols),
 		CitationCount:    len(citations),
 		EvidenceCoverage: round2(coverage),
-		MissingContext:   missing,
+		MissingContext:   nonNilStrings(missing),
 		Confidence: EvidenceConfidence{
 			Label:             label,
 			Score:             round2(coverage),
@@ -325,8 +394,10 @@ func buildDeepDiveEvidenceQualitySection(shared AskResponse, quality DeepDiveEvi
 	return DeepDiveReportSection{
 		ID:             "evidence_quality",
 		Title:          "Evidence Quality",
-		Findings:       findings,
-		MissingContext: quality.MissingContext,
+		Findings:       nonNilStrings(findings),
+		MissingContext: nonNilStrings(quality.MissingContext),
+		Evidence:       []EvidenceItem{},
+		Citations:      []rag.Citation{},
 		Confidence:     quality.Confidence,
 		TraceID:        shared.TraceID,
 	}
@@ -365,7 +436,7 @@ func uniqueDeepDiveCitations(sections []DeepDiveReportSection) []rag.Citation {
 			citations = append(citations, citation)
 		}
 	}
-	return citations
+	return nonNilCitations(citations)
 }
 
 func deepDiveTraceIDs(sections []DeepDiveReportSection) []uuid.UUID {
@@ -378,7 +449,24 @@ func deepDiveTraceIDs(sections []DeepDiveReportSection) []uuid.UUID {
 		seen[section.TraceID] = true
 		ids = append(ids, section.TraceID)
 	}
+	if ids == nil {
+		return []uuid.UUID{}
+	}
 	return ids
+}
+
+func nonNilCitations(values []rag.Citation) []rag.Citation {
+	if values == nil {
+		return []rag.Citation{}
+	}
+	return values
+}
+
+func nonNilEvidenceItems(values []EvidenceItem) []EvidenceItem {
+	if values == nil {
+		return []EvidenceItem{}
+	}
+	return values
 }
 
 func deepDiveSummary(shared AskResponse, quality DeepDiveEvidenceQuality) string {

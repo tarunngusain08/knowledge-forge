@@ -72,7 +72,7 @@ def result_from_response(row: dict[str, Any], response: dict[str, Any]) -> dict[
         "refused": answer.lower().startswith("i could not find"),
         "supported_claim_count": row.get("supported_claim_count", 0),
         "total_claim_count": row.get("total_claim_count", 0),
-        "latency_ms": int(retrieval.get("latency", 0) or 0),
+        "latency_ms": latency_ms(retrieval),
         "cost_usd": float(row.get("cost_usd", 0)),
         "answer": answer,
         "trace_id": response.get("trace_id", ""),
@@ -86,6 +86,8 @@ def metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     file_hits = 0
     refusal_total = 0
     refusal_correct = 0
+    answerable_total = 0
+    answerable_correct = 0
     totals = {
         "file_coverage": 0.0,
         "symbol_coverage": 0.0,
@@ -110,6 +112,10 @@ def metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
             refusal_total += 1
             if result.get("refused"):
                 refusal_correct += 1
+        else:
+            answerable_total += 1
+            if not result.get("refused") and answerable_question_correct(result):
+                answerable_correct += 1
     return {
         "question_count": question_count,
         "file_hit_rate": file_hits / question_count,
@@ -119,6 +125,7 @@ def metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         "citation_coverage": totals["citation_coverage"] / question_count,
         "evidence_coverage": totals["evidence_coverage"] / question_count,
         "refusal_accuracy": ratio(refusal_correct, refusal_total),
+        "answerable_question_accuracy": ratio(answerable_correct, answerable_total),
         "avg_latency_ms": totals["latency_ms"] / question_count,
         "avg_cost_usd": totals["cost_usd"] / question_count,
     }
@@ -151,6 +158,7 @@ def comparison_summary(baseline: list[dict[str, Any]], candidate: list[dict[str,
             "citation_coverage",
             "evidence_coverage",
             "refusal_accuracy",
+            "answerable_question_accuracy",
             "avg_latency_ms",
             "avg_cost_usd",
         ]
@@ -173,6 +181,24 @@ def question_score(result: dict[str, Any]) -> float:
         + line_coverage(result.get("expected_line_ranges", []), result.get("citation_line_ranges", []))
         + ratio(result.get("supported_claim_count", 0), result.get("total_claim_count", 0), default=1.0)
     ) / 4.0
+
+
+def answerable_question_correct(result: dict[str, Any]) -> bool:
+    expected_files = result.get("expected_files", [])
+    expected_symbols = result.get("expected_symbols", [])
+    if expected_files and coverage(expected_files, result.get("retrieved_files", [])) == 0:
+        return False
+    if expected_symbols and coverage(expected_symbols, result.get("retrieved_symbols", [])) == 0:
+        return False
+    return True
+
+
+def latency_ms(retrieval: dict[str, Any]) -> float:
+    if "latency_ms" in retrieval and retrieval.get("latency_ms") is not None:
+        return float(retrieval.get("latency_ms") or 0)
+    if "latency" in retrieval and retrieval.get("latency") is not None:
+        return float(retrieval.get("latency") or 0) / 1_000_000.0
+    return 0.0
 
 
 def coverage(expected: list[str], actual: list[str]) -> float:
