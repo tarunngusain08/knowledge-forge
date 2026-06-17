@@ -253,6 +253,40 @@ sequenceDiagram
   UI-->>User: Show cited workflow output
 ```
 
+## Use Case 9: Generate Repository Deep-Dive Report
+
+Goal:
+
+- Produce a downloadable, cited repository due-diligence report without running
+  a separate autonomous agent workflow.
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant UI as React UI
+  participant API as Go API
+  participant CodeQA as Code Q&A Service
+  participant Retrieval as Repository Retriever
+  participant Gemini as Gemini
+  participant DB as PostgreSQL
+
+  User->>UI: Click Generate Deep-Dive Report
+  UI->>API: POST /v1/reports/deep-dive
+  API->>CodeQA: Validate user/repository request
+  CodeQA->>Retrieval: Run shared broad evidence pass
+  Retrieval->>DB: Hydrate chunks and snapshot provenance
+  DB-->>Retrieval: Files, chunks, line ranges, commit SHA
+  Retrieval-->>CodeQA: Shared evidence hits
+  CodeQA->>Retrieval: Run up to four targeted section retrievals
+  Retrieval-->>CodeQA: Section evidence hits
+  CodeQA->>Gemini: Grounded report prompts with untrusted context
+  Gemini-->>CodeQA: Cited section answers
+  CodeQA->>CodeQA: Add missing context and evidence quality
+  CodeQA-->>API: Report JSON and Markdown export
+  API-->>UI: Deep-dive report, citations, trace IDs
+  UI-->>User: Show report and download Markdown
+```
+
 ## Use Case Summary
 
 | Use Case | Primary Components | Main Risk |
@@ -265,3 +299,4 @@ sequenceDiagram
 | Eval | Evaluation Service, Ragas | Misleading quality metrics |
 | Delete | Document Service, Pinecone, PostgreSQL | Stale vectors |
 | Plan/Impact | React UI, Code Q&A, Repository Retriever, Gemini | Unsupported recommendations |
+| Deep-Dive Report | React UI, Code Q&A, Repository Retriever, Gemini | Expensive or unsupported report claims |

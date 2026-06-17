@@ -122,6 +122,40 @@ export type ImpactAnalysisResponse = {
   model: string;
 };
 
+export type DeepDiveReportSection = {
+  id: string;
+  title: string;
+  findings: string[];
+  missing_context: string[];
+  evidence: EvidenceItem[];
+  citations: Citation[];
+  confidence: EvidenceConfidence;
+  trace_id?: string;
+  targeted: boolean;
+  answer?: string;
+};
+
+export type DeepDiveEvidenceQuality = {
+  files_examined: number;
+  cited_files: string[];
+  cited_symbols: string[];
+  citation_count: number;
+  evidence_coverage: number;
+  missing_context: string[];
+  confidence: EvidenceConfidence;
+};
+
+export type DeepDiveReportResponse = {
+  summary: string;
+  sections: DeepDiveReportSection[];
+  evidence_quality: DeepDiveEvidenceQuality;
+  trace_ids: string[];
+  provenance: AskResponse["provenance"];
+  model: string;
+  generated_at: string;
+  markdown: string;
+};
+
 export type FeedbackPayload = {
   trace_id: string;
   answer_correct: boolean;

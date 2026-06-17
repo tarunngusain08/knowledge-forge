@@ -245,6 +245,32 @@ func (s *Server) handleAnalyzeImpact(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (s *Server) handleGenerateDeepDiveReport(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
+	var req repositoryWorkflowRequest
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	resp, err := s.codeQA.GenerateDeepDiveReport(r.Context(), codeqa.WorkflowRequest{
+		UserID:          user.ID,
+		RepositoryID:    req.RepositoryID,
+		BranchName:      req.BranchName,
+		Request:         req.Request,
+		TopK:            req.TopK,
+		RerankerEnabled: req.RerankerEnabled,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (s *Server) handleGetRepositoryRetrievalTrace(w http.ResponseWriter, r *http.Request) {
 	traceID, err := uuid.Parse(chi.URLParam(r, "trace_id"))
 	if err != nil {

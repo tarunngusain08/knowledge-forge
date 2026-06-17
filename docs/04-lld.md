@@ -295,6 +295,61 @@ or run autonomous agents.
 
 The citation proves which chunk supported the answer.
 
+## Repository Deep-Dive Report LLD
+
+Phase 17 adds an on-demand report workflow:
+
+```text
+POST /v1/reports/deep-dive
+```
+
+The report reuses repository Q&A instead of adding a separate agent system:
+
+```text
+request
+-> repository ownership check
+-> shared broad evidence retrieval
+-> targeted retrieval for up to four weak/high-value sections
+-> grounded Gemini generation
+-> evidence quality calculation
+-> JSON response plus Markdown export
+```
+
+V1 report sections:
+
+```text
+Architecture Overview
+Entry Points
+Main Packages
+Authentication Flow
+Data Layer
+External Services
+Testing Strategy
+Risk Areas
+Suggested Improvements
+Missing Context
+Evidence Quality
+```
+
+Every section contains findings only when cited evidence exists. Unsupported
+sections report missing context instead of speculative claims.
+
+Response shape:
+
+```text
+summary
+sections[]
+evidence_quality
+trace_ids[]
+provenance
+model
+generated_at
+markdown
+```
+
+The report is not persisted in v1. The durable audit trail is provided by
+repository snapshot provenance and retrieval traces.
+
 ## Evaluation LLD
 
 Retrieval metrics:

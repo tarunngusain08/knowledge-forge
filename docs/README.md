@@ -17,3 +17,4 @@
 - [Git Deliverable Commits](git-deliverable-commits.md)
 - [Storage Notes](storage.md)
 - [Future Multi-Tenancy](multitenancy.md)
+- [Architecture Decision Records](adr)

@@ -11,6 +11,7 @@ current milestone adds a focused repository-intelligence MVP.
 Index repository
 -> Ask architecture/code question
 -> Inspect cited evidence
+-> Generate repository deep-dive report
 -> Generate implementation plan
 -> Generate impact analysis
 ```
@@ -19,8 +20,8 @@ The current repository-intelligence path can import/index one repository
 snapshot, answer repository questions with cited file evidence, classify the
 query, choose an adaptive retrieval budget, assemble context under a token
 budget, persist answer provenance for debugging and evaluation, and generate
-read-only implementation plans and impact analyses grounded in retrieved
-evidence.
+an on-demand deep-dive report plus read-only implementation plans and impact
+analyses grounded in retrieved evidence.
 
 ## Target Retrieval Flow
 
@@ -63,7 +64,7 @@ repository question
 -> context assembly under token budget
 -> Gemini/mock grounded answer
 -> citations with repository, branch, commit SHA, file path, and line range
--> optional implementation plan or impact analysis with evidence-derived confidence
+-> optional deep-dive report, implementation plan, or impact analysis with evidence-derived confidence
 ```
 
 The MVP includes repository registration, safe file walking, code chunking,
@@ -72,7 +73,9 @@ processing. Phase 14 adds adaptive query policy, context compression, retrieved
 chunk provenance, stage contribution tracking, and estimated generation cost in
 repository retrieval traces. Phase 16 adds read-only planning and impact
 analysis outputs with observed evidence, missing context, risks/tests, and
-evidence-derived confidence. Graph retrieval, PR review, diagrams, multi-repo
+evidence-derived confidence. Phase 17 adds an on-demand repository deep-dive
+report with a shared evidence pass, targeted retrieval for weak sections,
+evidence quality, missing context, and Markdown export. Graph retrieval, PR review, diagrams, multi-repo
 intelligence, autonomous code changes, and repository memory remain out of scope.
 
 ## Local Development
@@ -125,6 +128,7 @@ It never pushes, amends, rewrites history, or creates empty commits.
 - `POST /v1/repositories/{repository_id}/ingestions`
 - `GET /v1/ingestions/{job_id}`
 - `POST /v1/ask`
+- `POST /v1/reports/deep-dive`
 - `POST /v1/plans`
 - `POST /v1/impact`
 - `GET /v1/retrieval-traces/{trace_id}`
@@ -175,3 +179,4 @@ python3 eval-runner/repo_benchmark_runner.py \
 - [Evaluation](docs/evaluation.md)
 - [Git Deliverable Commits](docs/git-deliverable-commits.md)
 - [Future Multi-Tenancy](docs/multitenancy.md)
+- [Architecture Decision Records](docs/adr)

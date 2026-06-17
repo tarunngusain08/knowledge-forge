@@ -10,6 +10,10 @@ Git commit metadata, and repository retrieval traces.
 Pinecone is not the source of truth. Pinecone stores vector records for semantic
 search, while PostgreSQL stores the authoritative metadata and text chunks.
 
+Deep-dive reports are not persisted in v1. They are generated on demand from
+repository snapshots and retrieval traces, and the API returns Markdown export
+content directly in the response.
+
 ## Entity Relationship Diagram
 
 ```mermaid

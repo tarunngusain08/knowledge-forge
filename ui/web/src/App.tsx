@@ -3,9 +3,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
+  Clipboard,
   Code2,
   Database,
+  Download,
   FileSearch,
+  FileText,
   GitBranch,
   Loader2,
   LogIn,
@@ -20,6 +23,7 @@ import {
   analyzeImpact,
   askRepository,
   createRepository,
+  generateDeepDiveReport,
   generatePlan,
   getTrace,
   login,
@@ -30,6 +34,8 @@ import { citationLabel, compactList, currency } from "./format";
 import type {
   AskResponse,
   Citation,
+  DeepDiveReportResponse,
+  DeepDiveReportSection,
   EvidenceConfidence,
   EvidenceItem,
   FeedbackPayload,
@@ -57,9 +63,11 @@ export function App() {
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [plan, setPlan] = useState<ImplementationPlanResponse | null>(null);
   const [impact, setImpact] = useState<ImpactAnalysisResponse | null>(null);
+  const [report, setReport] = useState<DeepDiveReportResponse | null>(null);
   const [trace, setTrace] = useState<unknown>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [reportCopied, setReportCopied] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackPayload>({
     trace_id: "",
     answer_correct: true,
@@ -144,6 +152,8 @@ export function App() {
     setTrace(null);
     setPlan(null);
     setImpact(null);
+    setReport(null);
+    setReportCopied(false);
     setFeedbackSaved(false);
     setBusy("ask");
     try {
@@ -203,6 +213,49 @@ export function App() {
     } finally {
       setBusy("");
     }
+  }
+
+  async function handleReport() {
+    if (!repository) {
+      return;
+    }
+    setError("");
+    setReportCopied(false);
+    setBusy("report");
+    try {
+      setReport(await generateDeepDiveReport(token, {
+        repository_id: repository.id,
+        branch_name: repository.default_branch || "main",
+        request: question,
+        top_k: topK,
+        ...(rerankerMode === "adaptive" ? {} : { reranker_enabled: rerankerMode === "on" })
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Deep-dive report failed");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleCopyReport() {
+    if (!report?.markdown) {
+      return;
+    }
+    await navigator.clipboard.writeText(report.markdown);
+    setReportCopied(true);
+  }
+
+  function handleDownloadReport() {
+    if (!report?.markdown) {
+      return;
+    }
+    const blob = new Blob([report.markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "knowledge-forge-deep-dive.md";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleTrace() {
@@ -426,6 +479,51 @@ export function App() {
             </article>
           </section>
 
+          <section className="report-panel panel">
+            <div className="panel-heading">
+              <div className="panel-title">
+                <FileText size={18} aria-hidden />
+                <h2>Deep-Dive Report</h2>
+              </div>
+              <div className="button-row">
+                {report && (
+                  <>
+                    <button className="secondary compact" onClick={handleCopyReport}>
+                      <Clipboard size={14} aria-hidden />
+                      {reportCopied ? "Copied" : "Copy Markdown"}
+                    </button>
+                    <button className="secondary compact" onClick={handleDownloadReport}>
+                      <Download size={14} aria-hidden />
+                      Download Markdown
+                    </button>
+                  </>
+                )}
+                <button className="secondary compact" onClick={handleReport} disabled={!repository || busy === "report"}>
+                  {busy === "report" ? <Loader2 className="spin" size={14} aria-hidden /> : <Send size={14} aria-hidden />}
+                  Generate
+                </button>
+              </div>
+            </div>
+            {report ? (
+              <>
+                <SectionRows
+                  rows={[
+                    ["Summary", report.summary],
+                    ["Evidence Quality", formatReportQuality(report)],
+                    ["Provenance", formatReportProvenance(report)]
+                  ]}
+                />
+                <div className="report-sections">
+                  {report.sections.map((section) => (
+                    <ReportSectionView key={section.id} section={section} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="muted">No report generated.</p>
+            )}
+          </section>
+
           <section className="workflow-grid">
             <article className="panel">
               <div className="panel-heading">
@@ -561,6 +659,53 @@ function confidenceLabel(confidence: EvidenceConfidence) {
   const percent = Math.round(confidence.score * 100);
   const coverage = Math.round(confidence.evidence_coverage * 100);
   return `${confidence.label} (${percent}%, evidence coverage ${coverage}%)\n${confidence.reasons.join("\n")}`;
+}
+
+function formatReportQuality(report: DeepDiveReportResponse) {
+  const quality = report.evidence_quality;
+  return [
+    `Confidence: ${confidenceLabel(quality.confidence)}`,
+    `Files examined: ${quality.files_examined}`,
+    `Citations: ${quality.citation_count}`,
+    `Evidence coverage: ${Math.round(quality.evidence_coverage * 100)}%`,
+    `Cited files: ${formatList(quality.cited_files)}`,
+    `Missing context: ${formatList(quality.missing_context)}`
+  ].join("\n");
+}
+
+function formatReportProvenance(report: DeepDiveReportResponse) {
+  const provenance = report.provenance;
+  if (!provenance) {
+    return "none";
+  }
+  return [
+    `Branch: ${provenance.branch_name || "unknown"}`,
+    `Snapshot: ${provenance.snapshot_id || "unknown"}`,
+    `Commit: ${provenance.commit_sha || "unknown"}`,
+    `Model: ${report.model || "unknown"}`,
+    `Generated: ${new Date(report.generated_at).toLocaleString()}`,
+    `Traces: ${formatList(report.trace_ids)}`
+  ].join("\n");
+}
+
+function ReportSectionView({ section }: { section: DeepDiveReportSection }) {
+  return (
+    <details className="report-section-row">
+      <summary>
+        <ChevronRight size={15} aria-hidden />
+        <span>{section.title}</span>
+        <strong>{section.confidence.label}</strong>
+      </summary>
+      <SectionRows
+        rows={[
+          ["Findings", formatList(section.findings)],
+          ["Missing Context", formatList(section.missing_context)],
+          ["Evidence", section.evidence.length ? formatEvidence(section.evidence) : "none"],
+          ["Targeted Retrieval", section.targeted ? "yes" : "shared evidence pass"]
+        ]}
+      />
+    </details>
+  );
 }
 
 function FeedbackForm({

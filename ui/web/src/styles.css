@@ -113,6 +113,7 @@ pre {
 .brand-row,
 .panel-title,
 .panel-heading,
+.button-row,
 .topbar-meta,
 .primary,
 .secondary,
@@ -179,6 +180,11 @@ details > summary {
 .panel-heading {
   justify-content: space-between;
   gap: 12px;
+}
+
+.button-row {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .controls {
@@ -249,6 +255,41 @@ details > summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.report-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.report-sections {
+  display: grid;
+  gap: 8px;
+}
+
+.report-section-row {
+  border: 1px solid #d9ddd6;
+  border-radius: 6px;
+  background: #fbfcfa;
+  padding: 0 10px 10px;
+}
+
+.report-section-row > summary {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.report-section-row > summary span {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-section-row > summary strong {
+  border-radius: 999px;
+  background: #e9f3ef;
+  color: #164f42;
+  padding: 3px 8px;
+  font-size: 12px;
 }
 
 .answer-text {

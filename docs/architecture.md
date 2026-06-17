@@ -2,7 +2,8 @@
 
 Knowledge Forge is a production-style evidence-grounded knowledge assistant. It
 supports the original company-document RAG path and now includes a focused
-repository-intelligence MVP for cited codebase Q&A.
+repository-intelligence path for cited codebase Q&A, deep-dive reports,
+planning, and impact analysis.
 
 ```mermaid
 flowchart LR
@@ -43,8 +44,10 @@ flowchart LR
   CTX --> B[Token Budgeted Evidence]
   B --> G[Gemini Grounded Generation]
   G --> A[Answer + File/Line Citations]
+  A --> D[Deep-Dive Report + Markdown]
   A --> W[Read-only Plan or Impact Analysis]
   A --> T[Trace + Provenance + Cost]
+  D --> EQ[Evidence Quality + Missing Context]
   W --> E[Evidence-derived Confidence]
 ```
 
@@ -85,7 +88,8 @@ Pinecone, LangChainGo, or Ragas directly.
 
 The primary UI is a React/Vite product surface focused on the North-Star
 workflow. It keeps repository import, question, evidence, plan outline, impact
-analysis, trace/provenance, and structured feedback in one demo-oriented flow.
+analysis, deep-dive reports, trace/provenance, Markdown export, and structured
+feedback in one demo-oriented flow.
 The Streamlit UI remains in `ui/streamlit` as a fallback.
 
 Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
@@ -112,6 +116,12 @@ changes, missing context, tests, impacted files, and risks. Confidence is
 derived from citations, retrieval scores, context volume, commit provenance, and
 missing-context signals; it is not model self-confidence. The workflows are
 read-only and do not mutate code, open PRs, or run autonomous agents.
+
+Phase 17 adds repository deep-dive reports. A report starts with one shared
+broad evidence pass, runs up to four targeted follow-up retrievals for
+high-value weak sections, and returns structured JSON plus Markdown export. The
+report is generated on demand rather than stored as a database object; durable
+debugging still comes from snapshot provenance and retrieval traces.
 
 ## Repository Ingestion Safety
 
