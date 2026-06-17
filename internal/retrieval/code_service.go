@@ -87,6 +87,7 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 			return rag.RetrievalResult{}, err
 		}
 	}
+	latency := time.Since(start)
 	return rag.RetrievalResult{
 		OriginalQuery:     req.Query,
 		RewrittenQuery:    query,
@@ -105,7 +106,8 @@ func (s *CodeService) Retrieve(ctx context.Context, req rag.RetrievalRequest) (r
 			"dense":  len(denseHits),
 			"rerank": rerankContribution(req.RerankerEnabled, reranked),
 		},
-		Latency: time.Since(start),
+		Latency:   latency,
+		LatencyMS: latency.Milliseconds(),
 	}, nil
 }
 
