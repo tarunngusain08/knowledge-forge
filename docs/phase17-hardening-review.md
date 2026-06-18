@@ -1,8 +1,15 @@
 # Phase 17 Hardening Review
 
+Historical note: this branch-local review has been superseded by the accepted
+Phase 17 proof in [proof/phase17-validation.md](proof/phase17-validation.md).
+It is retained for context only. Current roadmap status lives in
+[roadmap.md](roadmap.md).
+
 Status: branch-local hardening package for `tgusain/m17-report-quality-hardening`.
 
-Phase 18 and Phase 19 remain blocked until this package is reviewed and no P0 findings remain.
+At the time this file was written, Phase 18 and Phase 19 were blocked until this
+package was reviewed and no P0 findings remained. That condition has since been
+superseded by the accepted Phase 17 validation result.
 
 ## Before
 
@@ -63,4 +70,3 @@ P0 examples:
 - Invalid latency metrics.
 - Refusal accuracy below target.
 - Answerable-question regression above allowed threshold.
-
