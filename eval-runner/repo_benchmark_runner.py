@@ -22,7 +22,8 @@ def write_json(path: Path, value: dict[str, Any]) -> None:
 
 
 def write_markdown(path: Path, output: dict[str, Any]) -> None:
-    lines = ["# Phase 18 Benchmark Report", ""]
+    title = output.get("report_title", "Phase 18 Benchmark Report")
+    lines = [f"# {title}", ""]
     lines.extend(["## Candidate Metrics", ""])
     lines.extend(metric_table(output.get("metrics", {})))
     if output.get("baseline_comparisons"):
@@ -37,6 +38,18 @@ def write_markdown(path: Path, output: dict[str, Any]) -> None:
             lines.extend([f"### {category}", ""])
             lines.extend(metric_table(category_metric))
             lines.extend([""])
+    if output.get("corpus_metrics"):
+        lines.extend(["## Per-Corpus Metrics", ""])
+        for corpus, corpus_metric in output["corpus_metrics"].items():
+            lines.extend([f"### {corpus}", ""])
+            lines.extend(metric_table(corpus_metric))
+            lines.extend([""])
+    if output.get("corpus_category_metrics"):
+        lines.extend(["## Per-Corpus Category Metrics", ""])
+        for key, corpus_category_metric in output["corpus_category_metrics"].items():
+            lines.extend([f"### {key}", ""])
+            lines.extend(metric_table(corpus_category_metric))
+            lines.extend([""])
     if output.get("category_outcomes"):
         lines.extend(["## Category Outcomes", ""])
         lines.append("| Category | Outcome | Best baseline | Correct delta | Primary metric delta |")
@@ -45,6 +58,35 @@ def write_markdown(path: Path, output: dict[str, Any]) -> None:
             lines.append(
                 f"| {outcome['category']} | {outcome['outcome']} | {outcome['best_baseline']} | "
                 f"{outcome['correct_delta']} | {outcome['primary_metric_delta']:.3f} |"
+            )
+    if output.get("corpus_outcomes"):
+        lines.extend(["", "## Corpus Outcomes", ""])
+        lines.append("| Corpus | Outcome | Best baseline | Correct delta | Primary metric delta |")
+        lines.append("| --- | --- | --- | ---: | ---: |")
+        for outcome in output["corpus_outcomes"]:
+            lines.append(
+                f"| {outcome['corpus']} | {outcome['outcome']} | {outcome['best_baseline']} | "
+                f"{outcome['correct_delta']} | {outcome['primary_metric_delta']:.3f} |"
+            )
+    if output.get("stability"):
+        stability = output["stability"]
+        lines.extend(["", "## Cross-Corpus Stability", ""])
+        lines.append(f"Classification: `{stability.get('classification', 'unknown')}`")
+        lines.append("")
+        lines.append("| Metric | Best corpus | Worst corpus | Range |")
+        lines.append("| --- | --- | --- | ---: |")
+        for item in stability.get("metrics", []):
+            lines.append(
+                f"| {item['metric']} | {item['best_corpus']} | {item['worst_corpus']} | {item['range']:.3f} |"
+            )
+    if output.get("failure_clusters"):
+        lines.extend(["", "## Failure Clusters", ""])
+        lines.append("| Cluster | Rows affected | Corpora affected | Possible cause |")
+        lines.append("| --- | ---: | --- | --- |")
+        for cluster in output["failure_clusters"]:
+            lines.append(
+                f"| {cluster['cluster']} | {cluster['rows_affected']} | "
+                f"{', '.join(cluster['corpora_affected']) or 'None'} | {cluster['possible_cause']} |"
             )
     if output.get("baseline_comparisons"):
         lines.extend(["", "## Question Movement", ""])
@@ -151,6 +193,7 @@ def result_from_response(row: dict[str, Any], response: dict[str, Any]) -> dict[
     return {
         "id": row.get("id", row["question"]),
         "category": row.get("category", "uncategorized"),
+        "corpus": row.get("corpus", ""),
         "question": row["question"],
         "expected_files": row.get("expected_files", []),
         "retrieved_files": retrieved_files,
@@ -260,6 +303,21 @@ def category_metrics(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
     return {category: metrics(category_results) for category, category_results in sorted(by_category.items())}
 
 
+def corpus_metrics(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    by_corpus: dict[str, list[dict[str, Any]]] = {}
+    for result in results:
+        by_corpus.setdefault(result.get("corpus") or "unknown", []).append(result)
+    return {corpus: metrics(corpus_results) for corpus, corpus_results in sorted(by_corpus.items())}
+
+
+def corpus_category_metrics(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for result in results:
+        key = f"{result.get('corpus') or 'unknown'} / {result.get('category', 'uncategorized')}"
+        grouped.setdefault(key, []).append(result)
+    return {key: metrics(group_results) for key, group_results in sorted(grouped.items())}
+
+
 def comparison_summary(baseline: list[dict[str, Any]], candidate: list[dict[str, Any]]) -> dict[str, Any]:
     before_by_question = {result_id(result): result for result in baseline}
     questions = {"improved": [], "unchanged": [], "degraded": []}
@@ -343,6 +401,133 @@ def category_outcomes(baselines: dict[str, list[dict[str, Any]]], candidate: lis
             }
         )
     return outcomes
+
+
+def corpus_outcomes(baselines: dict[str, list[dict[str, Any]]], candidate: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    candidate_corpora = corpus_metrics(candidate)
+    baseline_corpora = {name: corpus_metrics(rows) for name, rows in baselines.items()}
+    outcomes: list[dict[str, Any]] = []
+    for corpus, candidate_metric in candidate_corpora.items():
+        best_name = ""
+        best_baseline_score = -1.0
+        best_baseline_correct = 0
+        status = "IMPROVED"
+        for name, corpus_by_name in baseline_corpora.items():
+            baseline_metric = corpus_by_name.get(corpus, {"correct_count": 0, "question_count": 0})
+            baseline_score = primary_metric_score(baseline_metric)
+            if baseline_score > best_baseline_score:
+                best_name = name
+                best_baseline_score = baseline_score
+                best_baseline_correct = int(baseline_metric.get("correct_count", 0))
+            correct_delta = int(candidate_metric.get("correct_count", 0)) - int(baseline_metric.get("correct_count", 0))
+            metric_delta = primary_metric_score(candidate_metric) - baseline_score
+            if metric_delta < -0.001:
+                status = "DEGRADED"
+            elif correct_delta < 3 and relative_improvement(primary_metric_score(baseline_metric), primary_metric_score(candidate_metric)) < 0.10:
+                status = "UNCHANGED" if status != "DEGRADED" else status
+        candidate_score = primary_metric_score(candidate_metric)
+        outcomes.append(
+            {
+                "corpus": corpus,
+                "outcome": status,
+                "best_baseline": best_name,
+                "correct_delta": int(candidate_metric.get("correct_count", 0)) - best_baseline_correct,
+                "primary_metric_delta": candidate_score - best_baseline_score,
+            }
+        )
+    return outcomes
+
+
+def stability(corpus_metric_values: dict[str, dict[str, Any]], category_outcome_values: list[dict[str, Any]]) -> dict[str, Any]:
+    tracked = [
+        "retrieval_recall",
+        "evidence_recall",
+        "answerable_question_accuracy",
+        "refusal_precision",
+        "refusal_recall",
+        "grounding_coverage",
+    ]
+    metric_ranges: list[dict[str, Any]] = []
+    max_range = 0.0
+    for metric in tracked:
+        values = {
+            corpus: float(corpus_metrics.get(metric, 0.0))
+            for corpus, corpus_metrics in corpus_metric_values.items()
+            if metric in corpus_metrics
+        }
+        if not values:
+            continue
+        best_corpus = max(values, key=values.get)
+        worst_corpus = min(values, key=values.get)
+        metric_range = values[best_corpus] - values[worst_corpus]
+        max_range = max(max_range, metric_range)
+        metric_ranges.append(
+            {
+                "metric": metric,
+                "best_corpus": best_corpus,
+                "worst_corpus": worst_corpus,
+                "range": metric_range,
+            }
+        )
+    any_corpus_degraded = any(outcome.get("outcome") == "DEGRADED" for outcome in category_outcome_values)
+    major_failure = any(
+        outcome.get("outcome") == "DEGRADED"
+        and outcome.get("category") in {"architecture_implementation", "dependency_impact_testing", "deep_dive_grounding_architecture_evidence"}
+        for outcome in category_outcome_values
+    )
+    if max_range <= 0.10 and not any_corpus_degraded:
+        classification = "Stable"
+    elif max_range <= 0.20 and not major_failure:
+        classification = "Moderately Stable"
+    else:
+        classification = "Unstable"
+    return {"classification": classification, "max_range": max_range, "metrics": metric_ranges}
+
+
+def failure_clusters(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    clusters = {
+        "missing symbol retrieval": {"rows": [], "cause": "Expected symbols were not retrieved."},
+        "missing architecture evidence": {"rows": [], "cause": "Architecture evidence groups or files were missing."},
+        "multi-hop dependency reasoning": {"rows": [], "cause": "Dependency/impact questions missed required multi-file evidence."},
+        "impact analysis": {"rows": [], "cause": "Impact questions did not retrieve all affected files or facts."},
+        "refusal classification": {"rows": [], "cause": "Unsupported questions were answered or supported questions were refused."},
+        "grounding gaps": {"rows": [], "cause": "Claim grounding coverage was incomplete."},
+        "citation gaps": {"rows": [], "cause": "Expected citation or file evidence was missing."},
+    }
+    for result in results:
+        if row_correct(result):
+            continue
+        if result.get("should_refuse") and not result.get("refused"):
+            clusters["refusal classification"]["rows"].append(result)
+        if not result.get("should_refuse") and result.get("refused"):
+            clusters["refusal classification"]["rows"].append(result)
+        if result.get("expected_symbols") and coverage(result.get("expected_symbols", []), result.get("retrieved_symbols", [])) < 1.0:
+            clusters["missing symbol retrieval"]["rows"].append(result)
+        if result.get("category") == "architecture_implementation" and (
+            coverage(result.get("expected_files", []), result.get("retrieved_files", [])) < 1.0
+            or coverage(result.get("required_evidence_groups", []), evidence_groups(result)) < 1.0
+        ):
+            clusters["missing architecture evidence"]["rows"].append(result)
+        if result.get("category") == "dependency_impact_testing" and coverage(result.get("required_evidence_groups", []), evidence_groups(result)) < 1.0:
+            clusters["multi-hop dependency reasoning"]["rows"].append(result)
+            clusters["impact analysis"]["rows"].append(result)
+        if ratio(result.get("supported_claim_count", 0), result.get("total_claim_count", 0), default=1.0) < 1.0:
+            clusters["grounding gaps"]["rows"].append(result)
+        if result.get("expected_files") and coverage(result.get("expected_files", []), result.get("retrieved_files", [])) < 1.0:
+            clusters["citation gaps"]["rows"].append(result)
+    output: list[dict[str, Any]] = []
+    for cluster, data in clusters.items():
+        rows = data["rows"]
+        output.append(
+            {
+                "cluster": cluster,
+                "rows_affected": len({result_id(row) for row in rows}),
+                "corpora_affected": sorted({row.get("corpus") or "unknown" for row in rows}),
+                "row_ids": sorted({result_id(row) for row in rows}),
+                "possible_cause": data["cause"],
+            }
+        )
+    return sorted(output, key=lambda item: (-int(item["rows_affected"]), item["cluster"]))
 
 
 def primary_metric_score(values: dict[str, Any]) -> float:
@@ -503,7 +688,15 @@ def main() -> None:
         ]
     else:
         results = rows
-    output = {"metrics": metrics(results), "category_metrics": category_metrics(results), "results": results}
+    output = {
+        "report_title": "Phase 18.5 Multi-Corpus Benchmark Report",
+        "metrics": metrics(results),
+        "category_metrics": category_metrics(results),
+        "corpus_metrics": corpus_metrics(results),
+        "corpus_category_metrics": corpus_category_metrics(results),
+        "failure_clusters": failure_clusters(results),
+        "results": results,
+    }
     named_baselines: dict[str, list[dict[str, Any]]] = {}
     if args.baseline_input:
         baseline_rows = load_jsonl(Path(args.baseline_input))
@@ -521,7 +714,11 @@ def main() -> None:
         }
         output["baseline_metrics"] = {name: metrics(baseline_rows) for name, baseline_rows in named_baselines.items()}
         output["baseline_category_metrics"] = {name: category_metrics(baseline_rows) for name, baseline_rows in named_baselines.items()}
+        output["baseline_corpus_metrics"] = {name: corpus_metrics(baseline_rows) for name, baseline_rows in named_baselines.items()}
+        output["baseline_corpus_category_metrics"] = {name: corpus_category_metrics(baseline_rows) for name, baseline_rows in named_baselines.items()}
         output["category_outcomes"] = category_outcomes(named_baselines, results)
+        output["corpus_outcomes"] = corpus_outcomes(named_baselines, results)
+        output["stability"] = stability(output["corpus_metrics"], output["category_outcomes"])
     write_json(Path(args.output), output)
     if args.report_output:
         write_markdown(Path(args.report_output), output)

@@ -1,0 +1,51 @@
+{
+  "phase": "18.5",
+  "scope_limitation": "Results apply only to infrastructure, platform, and developer-tooling repositories. They must not be generalized to all repository types.",
+  "corpora": [
+    {
+      "id": "synthetic_enterprise_monolith",
+      "fixture_path": "eval-runner/fixtures/synthetic-enterprise-monolith",
+      "source_repository": "local synthetic fixture",
+      "commit_sha": "not_applicable",
+      "selected_files": "Existing Phase 18 synthetic enterprise monolith fixture.",
+      "excluded_areas": "No additional areas excluded in Phase 18.5.",
+      "rationale": "Retained as the controlled baseline corpus from Phase 18.",
+      "go_file_count": 9,
+      "source_loc": 438
+    },
+    {
+      "id": "helm",
+      "fixture_path": "eval-runner/fixtures/helm",
+      "source_repository": "https://github.com/helm/helm",
+      "tag": "v3.15.4",
+      "commit_sha": "fa9efb07d9d8debbb4306d72af76a383895aa8c4",
+      "selected_files": "CLI command assembly, action package, chart loading/downloading, repository metadata, Kubernetes client, release storage, storage drivers, release types, and registry utilities.",
+      "excluded_areas": "vendor, generated code, large testdata, plugin implementation details, search UI helpers, unrelated documentation, and broad package tests.",
+      "rationale": "Helm is a mature Go developer tool with command-to-action layering, release lifecycle behavior, storage abstraction, repository metadata, and Kubernetes integration.",
+      "go_file_count": 44,
+      "source_loc": 12066,
+      "caps": {
+        "max_source_files": 75,
+        "max_loc": 50000,
+        "status": "within_caps"
+      }
+    },
+    {
+      "id": "otel-collector",
+      "fixture_path": "eval-runner/fixtures/otel-collector",
+      "source_repository": "https://github.com/open-telemetry/opentelemetry-collector",
+      "tag": "v0.104.0",
+      "commit_sha": "a082f2e439e8f77a9a9503d54d8afea576f2d08c",
+      "selected_files": "Collector startup, command/config provider flow, service startup, pipeline config, extensions lifecycle, telemetry, component contracts, confmap, OTLP receiver/exporter, batch processor, memory limiter, and internal graph/status helpers.",
+      "excluded_areas": "vendor, generated code-heavy pdata packages, large testdata, broad test suites, connector variants, most helper packages, and unrelated documentation.",
+      "rationale": "OpenTelemetry Collector is a modular infrastructure repository with component factories, pipeline assembly, runtime lifecycle, and telemetry concerns.",
+      "go_file_count": 49,
+      "source_loc": 7360,
+      "caps": {
+        "max_source_files": 75,
+        "max_loc": 50000,
+        "status": "within_caps"
+      }
+    }
+  ]
+}
