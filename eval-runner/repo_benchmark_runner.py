@@ -68,6 +68,15 @@ def write_markdown(path: Path, output: dict[str, Any]) -> None:
                 f"| {outcome['corpus']} | {outcome['outcome']} | {outcome['best_baseline']} | "
                 f"{outcome['correct_delta']} | {outcome['primary_metric_delta']:.3f} |"
             )
+    if output.get("corpus_category_outcomes"):
+        lines.extend(["", "## Corpus Category Outcomes", ""])
+        lines.append("| Corpus / Category | Outcome | Best baseline | Correct delta | Primary metric delta |")
+        lines.append("| --- | --- | --- | ---: | ---: |")
+        for outcome in output["corpus_category_outcomes"]:
+            lines.append(
+                f"| {outcome['key']} | {outcome['outcome']} | {outcome['best_baseline']} | "
+                f"{outcome['correct_delta']} | {outcome['primary_metric_delta']:.3f} |"
+            )
     if output.get("stability"):
         stability = output["stability"]
         lines.extend(["", "## Cross-Corpus Stability", ""])
@@ -438,6 +447,41 @@ def corpus_outcomes(baselines: dict[str, list[dict[str, Any]]], candidate: list[
     return outcomes
 
 
+def corpus_category_outcomes(baselines: dict[str, list[dict[str, Any]]], candidate: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    candidate_groups = corpus_category_metrics(candidate)
+    baseline_groups = {name: corpus_category_metrics(rows) for name, rows in baselines.items()}
+    outcomes: list[dict[str, Any]] = []
+    for key, candidate_metric in candidate_groups.items():
+        best_name = ""
+        best_baseline_score = -1.0
+        best_baseline_correct = 0
+        status = "IMPROVED"
+        for name, group_by_name in baseline_groups.items():
+            baseline_metric = group_by_name.get(key, {"correct_count": 0, "question_count": 0})
+            baseline_score = primary_metric_score(baseline_metric)
+            if baseline_score > best_baseline_score:
+                best_name = name
+                best_baseline_score = baseline_score
+                best_baseline_correct = int(baseline_metric.get("correct_count", 0))
+            correct_delta = int(candidate_metric.get("correct_count", 0)) - int(baseline_metric.get("correct_count", 0))
+            metric_delta = primary_metric_score(candidate_metric) - baseline_score
+            if metric_delta < -0.001:
+                status = "DEGRADED"
+            elif correct_delta < 3 and relative_improvement(primary_metric_score(baseline_metric), primary_metric_score(candidate_metric)) < 0.10:
+                status = "UNCHANGED" if status != "DEGRADED" else status
+        candidate_score = primary_metric_score(candidate_metric)
+        outcomes.append(
+            {
+                "key": key,
+                "outcome": status,
+                "best_baseline": best_name,
+                "correct_delta": int(candidate_metric.get("correct_count", 0)) - best_baseline_correct,
+                "primary_metric_delta": candidate_score - best_baseline_score,
+            }
+        )
+    return outcomes
+
+
 def stability(corpus_metric_values: dict[str, dict[str, Any]], category_outcome_values: list[dict[str, Any]]) -> dict[str, Any]:
     tracked = [
         "retrieval_recall",
@@ -718,6 +762,7 @@ def main() -> None:
         output["baseline_corpus_category_metrics"] = {name: corpus_category_metrics(baseline_rows) for name, baseline_rows in named_baselines.items()}
         output["category_outcomes"] = category_outcomes(named_baselines, results)
         output["corpus_outcomes"] = corpus_outcomes(named_baselines, results)
+        output["corpus_category_outcomes"] = corpus_category_outcomes(named_baselines, results)
         output["stability"] = stability(output["corpus_metrics"], output["category_outcomes"])
     write_json(Path(args.output), output)
     if args.report_output:

@@ -26,7 +26,7 @@ data science repositories, or repositories with poor source organization.
 
 | Corpus | Source | Snapshot | Fixture | Size |
 | --- | --- | --- | --- | --- |
-| Synthetic enterprise monolith | local fixture | not applicable | `eval-runner/fixtures/synthetic-enterprise-monolith` | 9 Go files, 438 LOC |
+| Synthetic enterprise monolith | local fixture | not applicable | `eval-runner/fixtures/synthetic-enterprise-monolith` | 10 Go files, 267 LOC |
 | Helm | `https://github.com/helm/helm` | `v3.15.4`, `fa9efb07d9d8debbb4306d72af76a383895aa8c4` | `eval-runner/fixtures/helm` | 44 Go files, 12,066 LOC |
 | OpenTelemetry Collector | `https://github.com/open-telemetry/opentelemetry-collector` | `v0.104.0`, `a082f2e439e8f77a9a9503d54d8afea576f2d08c` | `eval-runner/fixtures/otel-collector` | 49 Go files, 7,360 LOC |
 
@@ -163,3 +163,31 @@ Overall:
 | Larger Corpus | Results are stable or moderately stable across corpora |
 
 If a threshold is not met, Phase 18.5 must not recommend `Proceed`.
+
+## Result
+
+Phase 18.5 result:
+
+```text
+Generalized
+```
+
+Within the infrastructure/platform/developer-tooling scope, Knowledge Forge
+improved over both keyword and retrieval-only baselines across the two added
+non-synthetic corpora:
+
+- Helm: 20/20 correct.
+- OpenTelemetry Collector: 18/20 correct.
+- Overall: 68/70 correct.
+- Cross-corpus stability: `Moderately Stable`.
+
+The result does not prove generalization to all repository types.
+
+## Proof Artifacts
+
+- `BENCHMARK-INTEGRITY-REVIEW.md`
+- `BENCHMARK-LEAKAGE-REVIEW.md`
+- `CORPUS-COVERAGE-REPORT.md`
+- `CROSS-CORPUS-STABILITY.md`
+- `FAILURE-CLUSTER-ANALYSIS.md`
+- `eval-runner/benchmarks/results/phase18_5/phase18_5-benchmark.md`

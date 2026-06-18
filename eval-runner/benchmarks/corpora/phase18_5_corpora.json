@@ -10,8 +10,8 @@
       "selected_files": "Existing Phase 18 synthetic enterprise monolith fixture.",
       "excluded_areas": "No additional areas excluded in Phase 18.5.",
       "rationale": "Retained as the controlled baseline corpus from Phase 18.",
-      "go_file_count": 9,
-      "source_loc": 438
+      "go_file_count": 10,
+      "source_loc": 267
     },
     {
       "id": "helm",
