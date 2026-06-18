@@ -40,6 +40,10 @@ claim.
 - [Evaluation](evaluation.md): retrieval and generation metrics.
 - [Acceptance Methodology](evaluations/acceptance-methodology.md): acceptance
   gates and how CI validates them.
+- [Phase 18 Benchmark Design](evaluations/phase18-benchmark-design.md):
+  benchmark schema, baselines, metrics, and freeze rules.
+- [Phase 18 Benchmark Proof](evaluations/phase18-benchmark-proof.md):
+  measured comparison against keyword and retrieval-only baselines.
 - [Phase 17 Validation Proof](proof/phase17-validation.md): only detailed
   Phase 17 proof narrative.
 - [Phase 17 Retrospective](postmortems/phase17-retrospective.md): reusable

@@ -35,15 +35,13 @@ Proof:
 
 - [Phase 17 Validation Proof](proof/phase17-validation.md)
 
-## Validated Next
-
 ### Phase 18: Benchmark Proof Pack
 
 Status:
 
 ```text
-Next
-Not started in this branch
+Complete
+Partially Proven
 ```
 
 Goal:
@@ -51,19 +49,33 @@ Goal:
 Publish concise benchmark evidence that proves where Knowledge Forge improves
 over naive semantic retrieval and where it does not.
 
-Expected outputs:
+Validated outputs:
 
 - benchmark JSON
 - human-readable benchmark report
-- a small set of high-quality case studies
 - improved/unchanged/degraded question analysis
 - latency and cost comparison
-- decision record for retrieval components that should remain enabled
+- Phase 19 justification decision table
 
-Boundary:
+Proof:
 
-Phase 18 should measure the existing validated system. It should not add static
-intelligence, graph retrieval, agents, code generation, or PR review.
+- [Phase 18 Benchmark Design](evaluations/phase18-benchmark-design.md)
+- [Phase 18 Benchmark Proof](evaluations/phase18-benchmark-proof.md)
+
+Result:
+
+```text
+Partially Proven
+```
+
+Knowledge Forge materially outperformed keyword and retrieval-only baselines in
+architecture, dependency/impact, and grounding categories. Refusal remained
+unchanged against the stronger retrieval-only baseline.
+
+## Validated Next
+
+The next validated investment is a larger benchmark corpus. Phase 19 static code
+intelligence should remain an investigation candidate, not an automatic build.
 
 ## Future Candidate
 

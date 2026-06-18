@@ -68,6 +68,9 @@ def write_markdown(path: Path, output: dict[str, Any]) -> None:
 
 def metric_table(values: dict[str, Any]) -> list[str]:
     rows = ["| Metric | Value |", "| --- | ---: |"]
+    answerable_count = int(values.get("answerable_question_count", 0))
+    refusal_count = int(values.get("refusal_question_count", 0))
+    refused_count = int(values.get("refused_count", 0))
     for key in [
         "question_count",
         "retrieval_recall",
@@ -83,6 +86,12 @@ def metric_table(values: dict[str, Any]) -> list[str]:
         "correctness_rate",
     ]:
         if key in values:
+            if key in {"retrieval_recall", "evidence_recall", "grounding_coverage", "mrr", "citation_accuracy"} and answerable_count == 0:
+                continue
+            if key == "answerable_question_accuracy" and answerable_count == 0:
+                continue
+            if key in {"refusal_precision", "refusal_recall"} and refusal_count == 0 and refused_count == 0:
+                continue
             rows.append(f"| {key} | {format_metric(values[key])} |")
     return rows
 
