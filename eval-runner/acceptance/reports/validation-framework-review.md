@@ -34,18 +34,15 @@
 - ARCH-NEG-001: README-only architecture evidence must not pass.
 - MET-004: claim grounding cannot pass when claim-to-citation labels are unavailable.
 
-## Rejected Negative-Control Examples
-
-- RF-001/RF-002: answerable RAG and HTTP API questions refused by exact-identifier logic.
-- FA-001/FA-002/FA-004: revenue, payroll, and external-fact questions answered from weak or missing evidence.
-- AR-001/AR-002: authentication answers graded relevant despite unrelated or partial evidence.
-- ARCH-NEG-001/ARCH-NEG-002: README-only and directory-only fixtures reported High-confidence layers.
-- MET-003/MET-004: section-support coverage used as grounding and unavailable claim grounding treated as pass.
-- Gate 5: incomplete labels allowed into acceptance results.
-
 ## Failing Examples
 
 No failures.
+
+## Evaluator Authority
+
+- Gate statuses are derived from evaluator issues.
+- Reports are generated from evaluator state and checked for verdict consistency.
+- Review text is not allowed to override evaluator pass/fail.
 
 ## Coverage
 

@@ -316,7 +316,8 @@
       "metric": "claim_grounding_coverage",
       "purpose": "Measures claim-level support by cited evidence.",
       "limitations": ["unavailable without claim-to-citation labels", "can be gamed by making trivial claims"],
-      "anti_gaming_checks": ["claim_labels_required", "citation_line_ranges_required", "unavailable_fails_acceptance"]
+      "anti_gaming_checks": ["claim_labels_required", "citation_line_ranges_required", "claim_to_citation_mapping_required", "unavailable_fails_acceptance"],
+      "required_proof_fields": ["claim", "citation_id", "file", "line_range", "evidence"]
     },
     {
       "id": "MET-005",

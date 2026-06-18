@@ -147,6 +147,7 @@
       "decision": "answer",
       "retrieved_files": ["internal/auth/auth.go", "internal/auth/middleware.go"],
       "cited_files": ["internal/auth/auth.go", "internal/auth/middleware.go"],
+      "cited_symbols": ["JWTManager", "Middleware"],
       "answer_facts": ["authentication uses JWT handling", "middleware validates authenticated requests"],
       "claim_support": {
         "authentication uses JWT handling": true,
@@ -162,6 +163,7 @@
       "decision": "answer",
       "retrieved_files": ["internal/auth/auth.go", "internal/database/connect.go", "internal/db/db.go"],
       "cited_files": ["internal/auth/auth.go", "internal/database/connect.go", "internal/db/db.go"],
+      "cited_symbols": ["JWTManager", "Connect"],
       "answer_facts": ["authentication is implemented separately from database connection setup", "database access uses pgx/sqlc generated code"],
       "claim_support": {
         "authentication is implemented separately from database connection setup": true,
@@ -177,6 +179,7 @@
       "decision": "answer",
       "retrieved_files": ["internal/retrieval/code_service.go", "internal/retrieval/rrf.go", "internal/rag/context.go"],
       "cited_files": ["internal/retrieval/code_service.go", "internal/retrieval/rrf.go", "internal/rag/context.go"],
+      "cited_symbols": ["CodeRetrievalService", "FuseRRF"],
       "answer_facts": ["retrieval gathers candidates", "RRF combines ranked candidates", "context is assembled for answer generation"],
       "claim_support": {
         "retrieval gathers candidates": true,
@@ -194,6 +197,7 @@
       "decision": "answer",
       "retrieved_files": ["internal/codeqa/reports.go", "internal/codeqa/service.go"],
       "cited_files": ["internal/codeqa/reports.go", "internal/codeqa/service.go"],
+      "cited_symbols": ["DeepDiveReport", "ReportSection"],
       "answer_facts": ["reports are generated as sections", "report claims must be tied to citations or missing context"],
       "claim_support": {
         "reports are generated as sections": true,
@@ -240,17 +244,7 @@
     },
     {
       "fixture_id": "ARCH-NEG-001",
-      "layers": [
-        {
-          "name": "api",
-          "confidence": "Low",
-          "evidence_type": "doc",
-          "files": ["cmd/api/README.md"],
-          "packages": [],
-          "line_ranges": [],
-          "sufficiency": "docs only, not architecture-defining"
-        }
-      ]
+      "layers": []
     },
     {
       "fixture_id": "ARCH-NEG-002",
@@ -295,7 +289,23 @@
       "status": "available",
       "used_as_acceptance_pass": true,
       "claim_to_citation_labels_present": true,
-      "citation_line_ranges_present": true
+      "citation_line_ranges_present": true,
+      "claim_grounding_mappings": [
+        {
+          "claim": "authentication uses JWT handling",
+          "citation_id": "AR-001-C1",
+          "file": "internal/auth/auth.go",
+          "line_range": "internal/auth/auth.go:1-80",
+          "evidence": "JWTManager symbol evidence supports authentication claim"
+        },
+        {
+          "claim": "reports are generated as sections",
+          "citation_id": "AR-004-C1",
+          "file": "internal/codeqa/reports.go",
+          "line_range": "internal/codeqa/reports.go:1-120",
+          "evidence": "DeepDiveReport and ReportSection evidence supports report generation claim"
+        }
+      ]
     },
     {
       "id": "MET-005",

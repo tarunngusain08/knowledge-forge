@@ -176,11 +176,7 @@ def evaluate_refusal_matrix(state: ValidationState) -> None:
 
         state.refusal_rows.append(row_summary)
 
-    answerable = [row for row in state.fixture.get("refusal_matrix", []) if row["expected_decision"] == "answer"]
-    unsupported = [row for row in state.fixture.get("refusal_matrix", []) if row["expected_decision"] == "refuse"]
-    false_refusal_rate = false_refusals / len(answerable) if answerable else 0.0
-    false_answer_rate = false_answers / len(unsupported) if unsupported else 0.0
-    state.gate_status[gate_name] = false_refusal_rate == 0.0 and false_answer_rate == 0.0
+    state.gate_status[gate_name] = not any(issue.gate == gate_name for issue in state.issues)
 
 
 def classify_relevance(fixture_row: dict[str, Any], result: dict[str, Any] | None) -> tuple[str, list[str]]:
@@ -192,10 +188,12 @@ def classify_relevance(fixture_row: dict[str, Any], result: dict[str, Any] | Non
 
     retrieved = as_set(result.get("retrieved_files")) | as_set(result.get("cited_files"))
     expected_files = set(fixture_row.get("expected_files", []))
+    expected_symbols = set(fixture_row.get("expected_symbols", []))
     required_groups = set(fixture_row.get("required_evidence_groups", []))
     expected_facts = list(fixture_row.get("expected_answer_facts", []))
     evidence_groups = result.get("evidence_groups") or {}
     claim_support = result.get("claim_support") or {}
+    symbols = as_set(result.get("actual_symbols")) | as_set(result.get("cited_symbols"))
 
     issues: list[str] = []
     missing_files = sorted(expected_files - retrieved)
@@ -208,6 +206,10 @@ def classify_relevance(fixture_row: dict[str, Any], result: dict[str, Any] | Non
     ]
     if missing_groups:
         issues.append(f"missing required evidence groups: {missing_groups}")
+
+    missing_symbols = sorted(expected_symbols - symbols)
+    if missing_symbols:
+        issues.append(f"missing expected symbols: {missing_symbols}")
 
     missing_facts = [
         fact for fact in expected_facts
@@ -298,9 +300,9 @@ def evaluate_architecture(state: ValidationState) -> None:
             layers = layer_by_name(result)
             for layer_name in fixture_row.get("forbidden_high_confidence_layers", []):
                 layer = layers.get(layer_name)
-                if layer and is_high_confidence(layer):
+                if layer:
                     row_issues.append(
-                        f"negative fixture produced High-confidence {layer_name} layer from {layer.get('evidence_type')}"
+                        f"negative fixture produced {layer_name} layer from {layer.get('evidence_type')} evidence"
                     )
 
         state.architecture_rows.append({
@@ -352,12 +354,24 @@ def evaluate_metrics(state: ValidationState) -> None:
                     row_issues.append("section_support_coverage used as grounding")
 
             if metric == "claim_grounding_coverage":
+                mappings = result.get("claim_grounding_mappings") or result.get("claim_to_citation_mappings") or []
                 if result.get("status") == "unavailable" and result.get("used_as_acceptance_pass"):
                     row_issues.append("claim_grounding_coverage unavailable but treated as pass")
                 if not result.get("claim_to_citation_labels_present"):
                     row_issues.append("claim grounding lacks claim-to-citation labels")
                 if not result.get("citation_line_ranges_present"):
                     row_issues.append("claim grounding lacks citation line ranges")
+                if result.get("used_as_acceptance_pass") and not mappings:
+                    row_issues.append("claim grounding lacks claim-to-citation mappings")
+                for index, mapping in enumerate(mappings):
+                    missing_fields = [
+                        field_name for field_name in ("claim", "citation_id", "file", "evidence", "line_range")
+                        if not mapping.get(field_name)
+                    ]
+                    if missing_fields:
+                        row_issues.append(
+                            f"claim grounding mapping {index} missing fields: {missing_fields}"
+                        )
 
             if metric == "architecture_layer_detection":
                 required_checks = {"source_code_evidence_required", "docs_only_negative_fixture", "directory_only_negative_fixture"}
@@ -428,6 +442,15 @@ def evaluate_label_completeness(state: ValidationState) -> None:
 
 def evaluate_adversarial_benchmark(state: ValidationState) -> None:
     gate_name = "Gate 6 Adversarial Benchmark"
+    adversarial_ids = {
+        row.get("id") for row in state.fixture.get("refusal_matrix", [])
+    } | {
+        row.get("id") for row in state.fixture.get("answer_relevance", [])
+    } | {
+        row.get("id") for row in state.fixture.get("architecture_fixtures", [])
+    } | {
+        row.get("id") for row in state.fixture.get("metric_integrity", [])
+    }
     categories = {row.get("category") for row in state.fixture.get("refusal_matrix", [])}
     required_categories = {"false_refusal_catcher", "false_answer_catcher"}
     missing_categories = required_categories - categories
@@ -441,6 +464,17 @@ def evaluate_adversarial_benchmark(state: ValidationState) -> None:
     if not state.fixture.get("metric_integrity"):
         state.fail(gate_name, "suite", "adversarial benchmark missing metric catchers")
 
+    behavior_issues = [
+        issue for issue in state.issues
+        if issue.gate != gate_name and issue.row_id in adversarial_ids
+    ]
+    if behavior_issues:
+        state.fail(
+            gate_name,
+            "suite",
+            f"adversarial behavior failures detected: {len(behavior_issues)} evaluator issues"
+        )
+
     state.gate_status[gate_name] = not any(issue.gate == gate_name for issue in state.issues)
 
 
@@ -453,6 +487,19 @@ def validate(fixture: dict[str, Any], candidate: dict[str, Any]) -> ValidationSt
     evaluate_label_completeness(state)
     evaluate_adversarial_benchmark(state)
     return state
+
+
+def state_to_dict(state: ValidationState) -> dict[str, Any]:
+    return {
+        "passed": state.passed,
+        "gate_status": state.gate_status,
+        "issues": [issue.__dict__ for issue in state.issues],
+        "refusal_rows": state.refusal_rows,
+        "relevance_rows": state.relevance_rows,
+        "architecture_rows": state.architecture_rows,
+        "metric_rows": state.metric_rows,
+        "label_rows": state.label_rows,
+    }
 
 
 def md_escape(value: Any) -> str:
@@ -521,16 +568,24 @@ def write_answer_relevance_report(state: ValidationState, output_dir: Path) -> N
     (output_dir / "answer-relevance-report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def architecture_expectation(row: dict[str, Any]) -> str:
+    if row.get("expected_result") == "pass":
+        return "source-code layers required"
+    return "negative fixture must not detect layers"
+
+
 def write_architecture_report(state: ValidationState, output_dir: Path) -> None:
     lines = [
         "# Architecture Validation Report",
         "",
-        "| ID | Fixture | Expected | Status | Issues |",
+        "| ID | Fixture | Fixture Expectation | Validation Result | Issues |",
         "| --- | --- | --- | --- | --- |"
     ]
+    fixture_rows = index_by_id(state.fixture.get("architecture_fixtures", []))
     for row in state.architecture_rows:
+        fixture_row = fixture_rows.get(row["id"], {})
         lines.append(
-            f"| {row['id']} | {row['name']} | {row['expected_result']} | {row['status']} | {md_escape('; '.join(row['issues']))} |"
+            f"| {row['id']} | {row['name']} | {architecture_expectation(fixture_row)} | {row['status']} | {md_escape('; '.join(row['issues']))} |"
         )
     (output_dir / "architecture-validation-report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -593,18 +648,15 @@ def write_review_report(state: ValidationState, output_dir: Path) -> None:
         "- ARCH-NEG-001: README-only architecture evidence must not pass.",
         "- MET-004: claim grounding cannot pass when claim-to-citation labels are unavailable.",
         "",
-        "## Rejected Negative-Control Examples",
-        "",
-        "- RF-001/RF-002: answerable RAG and HTTP API questions refused by exact-identifier logic.",
-        "- FA-001/FA-002/FA-004: revenue, payroll, and external-fact questions answered from weak or missing evidence.",
-        "- AR-001/AR-002: authentication answers graded relevant despite unrelated or partial evidence.",
-        "- ARCH-NEG-001/ARCH-NEG-002: README-only and directory-only fixtures reported High-confidence layers.",
-        "- MET-003/MET-004: section-support coverage used as grounding and unavailable claim grounding treated as pass.",
-        "- Gate 5: incomplete labels allowed into acceptance results.",
-        "",
         "## Failing Examples",
         "",
         issue_table(state.issues),
+        "## Evaluator Authority",
+        "",
+        "- Gate statuses are derived from evaluator issues.",
+        "- Reports are generated from evaluator state and checked for verdict consistency.",
+        "- Review text is not allowed to override evaluator pass/fail.",
+        "",
         "## Coverage",
         "",
         "- Refusal decision matrix covers answerable acronym questions and unsupported business/external/prompt-injection questions.",
@@ -619,14 +671,70 @@ def write_review_report(state: ValidationState, output_dir: Path) -> None:
     (output_dir / "validation-framework-review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_state_json(state: ValidationState, output_dir: Path) -> None:
+    (output_dir / "validation-state.json").write_text(
+        json.dumps(state_to_dict(state), indent=2) + "\n",
+        encoding="utf-8"
+    )
+
+
 def write_reports(state: ValidationState, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    write_state_json(state, output_dir)
     write_false_refusal_report(state, output_dir)
     write_false_answer_report(state, output_dir)
     write_answer_relevance_report(state, output_dir)
     write_architecture_report(state, output_dir)
     write_metric_report(state, output_dir)
     write_review_report(state, output_dir)
+
+
+def parse_review_result(markdown: str) -> str | None:
+    lines = [line.strip() for line in markdown.splitlines()]
+    for index, line in enumerate(lines):
+        if line == "## Result":
+            for value in lines[index + 1:]:
+                if value:
+                    return value.lower()
+    return None
+
+
+def parse_review_gate_status(markdown: str) -> dict[str, bool]:
+    statuses: dict[str, bool] = {}
+    for line in markdown.splitlines():
+        parts = [part.strip() for part in line.strip().strip("|").split("|")]
+        if len(parts) == 2 and parts[0].startswith("Gate "):
+            statuses[parts[0]] = parts[1].lower() == "pass"
+    return statuses
+
+
+def validate_report_consistency(state: ValidationState, output_dir: Path) -> list[str]:
+    issues: list[str] = []
+    state_path = output_dir / "validation-state.json"
+    review_path = output_dir / "validation-framework-review.md"
+    if not state_path.exists():
+        issues.append("validation-state.json missing")
+    else:
+        raw_state = json.loads(state_path.read_text(encoding="utf-8"))
+        if raw_state.get("passed") is not state.passed:
+            issues.append("raw state verdict differs from evaluator verdict")
+        if raw_state.get("gate_status") != state.gate_status:
+            issues.append("raw state gate statuses differ from evaluator gate statuses")
+
+    if not review_path.exists():
+        issues.append("validation-framework-review.md missing")
+    else:
+        review = review_path.read_text(encoding="utf-8")
+        review_result = parse_review_result(review)
+        expected_result = "pass" if state.passed else "fail"
+        if review_result != expected_result:
+            issues.append(f"review verdict {review_result!r} differs from evaluator verdict {expected_result!r}")
+        review_gates = parse_review_gate_status(review)
+        for gate_name, expected in state.gate_status.items():
+            if review_gates.get(gate_name) is not expected:
+                issues.append(f"review gate {gate_name!r} differs from evaluator status")
+
+    return issues
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -643,14 +751,17 @@ def main(argv: list[str]) -> int:
     candidate = load_json(args.candidate)
     state = validate(fixture, candidate)
     write_reports(state, args.output)
+    consistency_issues = validate_report_consistency(state, args.output)
 
-    if state.passed:
+    if state.passed and not consistency_issues:
         print(f"acceptance validation passed; reports written to {args.output}")
         return 0
 
     print(f"acceptance validation failed; reports written to {args.output}", file=sys.stderr)
     for issue in state.issues:
         print(f"{issue.gate} [{issue.row_id}]: {issue.message}", file=sys.stderr)
+    for issue in consistency_issues:
+        print(f"Report Consistency: {issue}", file=sys.stderr)
     return 1
 
 
