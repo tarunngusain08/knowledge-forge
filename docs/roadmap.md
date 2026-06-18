@@ -72,10 +72,52 @@ Knowledge Forge materially outperformed keyword and retrieval-only baselines in
 architecture, dependency/impact, and grounding categories. Refusal remained
 unchanged against the stronger retrieval-only baseline.
 
+### Phase 18.5: Multi-Corpus Benchmark Expansion
+
+Status:
+
+```text
+Complete
+Generalized within infrastructure/tooling scope
+```
+
+Goal:
+
+Test whether Phase 18 repository-intelligence gains generalize beyond the
+synthetic monolith.
+
+Validated outputs:
+
+- Helm curated corpus
+- OpenTelemetry Collector curated corpus
+- corpus coverage report
+- cross-corpus stability analysis
+- failure cluster analysis
+- benchmark leakage review
+- evidence-backed Phase 19 decision table
+
+Proof:
+
+- [Phase 18.5 Multi-Corpus Benchmark](evaluations/phase18-5-multi-corpus-benchmark.md)
+- [Phase 18.5 Benchmark Report](../eval-runner/benchmarks/results/phase18_5/phase18_5-benchmark.md)
+
+Result:
+
+```text
+Generalized
+Moderately Stable
+```
+
+The result applies only to infrastructure, platform, and developer-tooling
+repositories represented by the benchmark. It must not be generalized to all
+repository types.
+
 ## Validated Next
 
-The next validated investment is a larger benchmark corpus. Phase 19 static code
-intelligence should remain an investigation candidate, not an automatic build.
+The next validated investment is broader corpus expansion, especially outside
+infrastructure/tooling repositories. Repository Structure Indexing and Static
+Code Intelligence remain investigation candidates. Graph Retrieval remains
+rejected until graph-specific failures dominate measured results.
 
 ## Future Candidate
 

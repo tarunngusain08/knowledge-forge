@@ -1,6 +1,17 @@
 from pathlib import Path
 
-from repo_benchmark_runner import category_metrics, category_outcomes, comparison_summary, latency_ms, metrics, write_markdown
+from repo_benchmark_runner import (
+    category_metrics,
+    category_outcomes,
+    comparison_summary,
+    corpus_category_metrics,
+    corpus_metrics,
+    failure_clusters,
+    latency_ms,
+    metrics,
+    stability,
+    write_markdown,
+)
 
 
 def test_repository_metrics_include_failure_quality() -> None:
@@ -149,3 +160,62 @@ def test_markdown_report_writes_metrics(tmp_path: Path) -> None:
     text = report.read_text()
     assert "# Phase 18 Benchmark Report" in text
     assert "Category Outcomes" in text
+
+
+def test_corpus_metrics_and_stability_report_cross_corpus_quality() -> None:
+    candidate = [
+        {
+            "id": "synth-1",
+            "corpus": "synthetic",
+            "category": "architecture_implementation",
+            "expected_files": ["a.go"],
+            "retrieved_files": ["a.go"],
+            "required_evidence_groups": ["a"],
+            "retrieved_evidence_groups": ["a"],
+            "supported_claim_count": 1,
+            "total_claim_count": 1,
+        },
+        {
+            "id": "helm-1",
+            "corpus": "helm",
+            "category": "architecture_implementation",
+            "expected_files": ["b.go"],
+            "retrieved_files": ["b.go"],
+            "required_evidence_groups": ["b"],
+            "retrieved_evidence_groups": ["b"],
+            "supported_claim_count": 1,
+            "total_claim_count": 1,
+        },
+    ]
+    by_corpus = corpus_metrics(candidate)
+    by_corpus_category = corpus_category_metrics(candidate)
+
+    assert by_corpus["helm"]["question_count"] == 1
+    assert by_corpus_category["helm / architecture_implementation"]["correct_count"] == 1
+    assert stability(by_corpus, [])["classification"] == "Stable"
+
+
+def test_failure_clusters_identify_missing_dependency_and_grounding_evidence() -> None:
+    clusters = failure_clusters(
+        [
+            {
+                "id": "impact-1",
+                "corpus": "otel",
+                "category": "dependency_impact_testing",
+                "expected_files": ["service.go", "pipelines.go"],
+                "retrieved_files": ["service.go"],
+                "expected_symbols": ["Service", "PipelineConfig"],
+                "retrieved_symbols": ["Service"],
+                "required_evidence_groups": ["service", "pipelines"],
+                "retrieved_evidence_groups": ["service"],
+                "expected_answer_facts": ["service starts pipelines"],
+                "matched_answer_facts": [],
+                "supported_claim_count": 0,
+                "total_claim_count": 1,
+            }
+        ]
+    )
+
+    by_name = {cluster["cluster"]: cluster for cluster in clusters}
+    assert by_name["multi-hop dependency reasoning"]["rows_affected"] == 1
+    assert by_name["grounding gaps"]["corpora_affected"] == ["otel"]

@@ -44,6 +44,8 @@ claim.
   benchmark schema, baselines, metrics, and freeze rules.
 - [Phase 18 Benchmark Proof](evaluations/phase18-benchmark-proof.md):
   measured comparison against keyword and retrieval-only baselines.
+- [Phase 18.5 Multi-Corpus Benchmark](evaluations/phase18-5-multi-corpus-benchmark.md):
+  Helm and OpenTelemetry Collector generalization proof.
 - [Phase 17 Validation Proof](proof/phase17-validation.md): only detailed
   Phase 17 proof narrative.
 - [Phase 17 Retrospective](postmortems/phase17-retrospective.md): reusable
