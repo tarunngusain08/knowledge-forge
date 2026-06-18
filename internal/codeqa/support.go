@@ -99,6 +99,28 @@ func evaluateAnswerSupport(question, category string, hits []rag.RetrievalHit) s
 			MissingEvidence: missingEvidence,
 		}
 	}
+	if category == retrievalpkg.CategoryExactLookup && containsLikelyIdentifier(question) && len(missing) > 0 {
+		return supportGateResult{
+			Answerable:      false,
+			Reason:          "missing_identifier",
+			MatchedTerms:    matched,
+			MissingTerms:    missing,
+			MatchedEvidence: matchedEvidence,
+			MissingEvidence: appendMissingEvidence(missingEvidence, missingIdentifierEvidence(question)),
+		}
+	}
+
+	if len(requiredEvidence) > 0 && len(missingEvidence) == 0 {
+		return supportGateResult{
+			Answerable:      true,
+			Reason:          "repository_supported_fact",
+			MatchedTerms:    matched,
+			MissingTerms:    missing,
+			MatchedEvidence: matchedEvidence,
+			MissingEvidence: missingEvidence,
+		}
+	}
+
 	if len(matched) == 0 {
 		return supportGateResult{
 			Answerable:      false,
@@ -118,17 +140,6 @@ func evaluateAnswerSupport(question, category string, hits []rag.RetrievalHit) s
 			MissingTerms:    missing,
 			MatchedEvidence: matchedEvidence,
 			MissingEvidence: missingEvidence,
-		}
-	}
-
-	if category == retrievalpkg.CategoryExactLookup && containsLikelyIdentifier(question) && len(missing) > 0 {
-		return supportGateResult{
-			Answerable:      false,
-			Reason:          "missing_identifier",
-			MatchedTerms:    matched,
-			MissingTerms:    missing,
-			MatchedEvidence: matchedEvidence,
-			MissingEvidence: appendMissingEvidence(missingEvidence, missingIdentifierEvidence(question)),
 		}
 	}
 

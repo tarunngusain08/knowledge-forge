@@ -130,6 +130,28 @@ func TestSupportGateRefusesBusinessDomainFromPathShortcut(t *testing.T) {
 	}
 }
 
+func TestSupportGateAllowsCompleteEvidenceGroupsWithoutTermOverlap(t *testing.T) {
+	repoID := uuid.New()
+	snapshotID := uuid.New()
+	gate := evaluateAnswerSupport("How does repository registration work?", "architecture_explanation", []rag.RetrievalHit{
+		codeQATestHit(repoID, snapshotID, "internal/httpapi/repository_handlers.go", "package httpapi\nfunc CreateRepository() {}"),
+		codeQATestHit(repoID, snapshotID, "internal/repositories/service.go", "package repositories\nfunc Create() {}"),
+	})
+
+	if !gate.Answerable {
+		t.Fatalf("complete repository registration evidence should be answerable: %#v", gate)
+	}
+	if gate.Reason != "repository_supported_fact" {
+		t.Fatalf("reason = %s", gate.Reason)
+	}
+	if len(gate.MissingEvidence) != 0 {
+		t.Fatalf("missing evidence = %#v", gate.MissingEvidence)
+	}
+	if !contains(gate.MatchedEvidence, "repository_api") || !contains(gate.MatchedEvidence, "repository_store") {
+		t.Fatalf("matched evidence = %#v", gate.MatchedEvidence)
+	}
+}
+
 func TestAskCompletesMissingEvidenceGroupsBeforeGeneration(t *testing.T) {
 	userID := uuid.New()
 	repoID := uuid.New()
@@ -167,6 +189,47 @@ func TestAskCompletesMissingEvidenceGroupsBeforeGeneration(t *testing.T) {
 		t.Fatalf("support gate = %#v", gate)
 	}
 	if !contains(gate.MatchedEvidence, "auth_service") || !contains(gate.MatchedEvidence, "database_connection") {
+		t.Fatalf("matched evidence = %#v", gate.MatchedEvidence)
+	}
+}
+
+func TestAskRetainsReportOrchestrationEvidenceAfterFollowUp(t *testing.T) {
+	userID := uuid.New()
+	repoID := uuid.New()
+	snapshotID := uuid.New()
+	store := &codeQATestStore{
+		repo: codeintel.Repository{
+			ID:            repoID,
+			OwnerUserID:   userID,
+			DefaultBranch: "main",
+		},
+	}
+	llm := &codeQATestLLM{}
+	service := NewService(store, nil, llm, codeQAReportFollowUpRetriever{
+		repositoryID: repoID,
+		snapshotID:   snapshotID,
+	})
+
+	response, err := service.Ask(context.Background(), AskRequest{
+		UserID:       userID,
+		RepositoryID: repoID,
+		Question:     "How are deep-dive reports generated?",
+	})
+	if err != nil {
+		t.Fatalf("Ask returned error: %v", err)
+	}
+	if response.Answer == refusalAnswer {
+		t.Fatalf("report generation answer was refused")
+	}
+	files := citationFiles(response.Citations)
+	if !contains(files, "internal/codeqa/reports.go") || !contains(files, "internal/codeqa/service.go") {
+		t.Fatalf("citations did not include report and orchestration evidence: %#v", files)
+	}
+	gate := supportGateFromTrace(t, store.trace)
+	if !gate.Answerable {
+		t.Fatalf("support gate = %#v", gate)
+	}
+	if !contains(gate.MatchedEvidence, "report_generator") || !contains(gate.MatchedEvidence, "repo_qa_service") {
 		t.Fatalf("matched evidence = %#v", gate.MatchedEvidence)
 	}
 }
@@ -249,6 +312,43 @@ func (r codeQAFollowUpRetriever) Retrieve(_ context.Context, req rag.RetrievalRe
 		hits = []rag.RetrievalHit{
 			codeQATestHit(r.repositoryID, r.snapshotID, "internal/auth/auth.go", "package auth\ntype JWTManager struct{}"),
 		}
+	}
+	return rag.RetrievalResult{
+		OriginalQuery:      req.Query,
+		RewrittenQuery:     req.Query,
+		RepositoryID:       r.repositoryID,
+		SnapshotID:         r.snapshotID,
+		BranchName:         req.BranchName,
+		CommitSHA:          "abc123",
+		DenseHits:          hits,
+		FusedHits:          hits,
+		RerankedHits:       hits,
+		QueryCategory:      req.QueryCategory,
+		RetrievalPath:      req.RetrievalPath,
+		RetrievalConfig:    req.RetrievalConfig,
+		RetrievedChunkIDs:  retrievedChunkIDs(hits),
+		StageContributions: map[string]int{"dense": len(hits)},
+		LatencyMS:          12,
+	}, nil
+}
+
+type codeQAReportFollowUpRetriever struct {
+	repositoryID uuid.UUID
+	snapshotID   uuid.UUID
+}
+
+func (r codeQAReportFollowUpRetriever) Retrieve(_ context.Context, req rag.RetrievalRequest) (rag.RetrievalResult, error) {
+	var hits []rag.RetrievalHit
+	if strings.Contains(strings.ToLower(req.Query), "repository qa") {
+		hit := codeQATestHit(r.repositoryID, r.snapshotID, "internal/codeqa/service.go", strings.Repeat("repository qa service report orchestration ", 1200))
+		hit.Chunk.TokenCount = 3000
+		hits = []rag.RetrievalHit{
+			hit,
+		}
+	} else {
+		hit := codeQATestHit(r.repositoryID, r.snapshotID, "internal/codeqa/reports.go", strings.Repeat("report section citation evidence quality ", 1200))
+		hit.Chunk.TokenCount = 5000
+		hits = []rag.RetrievalHit{hit}
 	}
 	return rag.RetrievalResult{
 		OriginalQuery:      req.Query,

@@ -106,7 +106,7 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 	if err != nil {
 		return AskResponse{}, fmt.Errorf("retrieve repository context: %w", err)
 	}
-	assembly := rag.AssembleContext(retrieval.RerankedHits, policy.ContextTokenBudget)
+	assembly := assembleContextWithRequiredEvidence(req.Question, retrieval.RerankedHits, policy.ContextTokenBudget)
 	retrieval.ContextTokenCount = assembly.TokenCount
 	retrieval.RetrievedChunkIDs = retrievedChunkIDs(assembly.Hits)
 	retrieval.StageContributions = withContextContribution(retrieval.StageContributions, len(assembly.Hits))
@@ -239,7 +239,7 @@ func (s *Service) completeMissingSupportEvidence(ctx context.Context, req AskReq
 			return retrieval, assembly, support, fmt.Errorf("retrieve missing evidence group %s: %w", group, err)
 		}
 		retrieval = mergeRetrievalResults(retrieval, followUp)
-		assembly = rag.AssembleContext(mergeHits(assembly.Hits, followUp.RerankedHits), policy.ContextTokenBudget)
+		assembly = assembleContextWithRequiredEvidence(req.Question, retrieval.RerankedHits, policy.ContextTokenBudget)
 		retrieval.ContextTokenCount = assembly.TokenCount
 		retrieval.RetrievedChunkIDs = retrievedChunkIDs(assembly.Hits)
 		retrieval.StageContributions = withContextContribution(retrieval.StageContributions, len(assembly.Hits))
@@ -329,6 +329,109 @@ func retrievalHitKey(hit rag.RetrievalHit) string {
 	start := fmt.Sprint(hit.Chunk.Metadata["start_line"])
 	end := fmt.Sprint(hit.Chunk.Metadata["end_line"])
 	return path + ":" + start + ":" + end + ":" + hit.Chunk.Content
+}
+
+func assembleContextWithRequiredEvidence(question string, hits []rag.RetrievalHit, maxTokens int) rag.ContextAssembly {
+	assembly := rag.AssembleContext(hits, maxTokens)
+	required := requiredEvidenceGroups(question)
+	if len(required) == 0 {
+		return assembly
+	}
+	_, missing := evidenceGroupSupport(required, assembly.Hits)
+	if len(missing) == 0 {
+		return assembly
+	}
+	_, unavailable := evidenceGroupSupport(missing, hits)
+	if len(unavailable) > 0 {
+		return assembly
+	}
+	candidate := rag.AssembleContext(prioritizeRequiredEvidenceHits(required, hits, maxTokens), maxTokens)
+	_, candidateMissing := evidenceGroupSupport(required, candidate.Hits)
+	if len(candidateMissing) < len(missing) {
+		return candidate
+	}
+	return assembly
+}
+
+func prioritizeRequiredEvidenceHits(required []string, hits []rag.RetrievalHit, maxTokens int) []rag.RetrievalHit {
+	if len(required) == 0 || len(hits) == 0 {
+		return hits
+	}
+	selected := make([]rag.RetrievalHit, 0, len(required))
+	seen := map[string]bool{}
+	for _, group := range required {
+		for _, hit := range hits {
+			if !hitSupportsEvidenceGroup(hit, group) {
+				continue
+			}
+			key := retrievalHitKey(hit)
+			if seen[key] {
+				break
+			}
+			seen[key] = true
+			selected = append(selected, hit)
+			break
+		}
+	}
+	if len(selected) == 0 {
+		return hits
+	}
+	if maxTokens <= 0 {
+		maxTokens = 2400
+	}
+	budgetPerHit := maxTokens / len(selected)
+	if budgetPerHit <= 0 {
+		budgetPerHit = maxTokens
+	}
+	for idx := range selected {
+		selected[idx] = compactHitForTokenBudget(selected[idx], budgetPerHit)
+	}
+	return mergeHits(selected, hits)
+}
+
+func hitSupportsEvidenceGroup(hit rag.RetrievalHit, group string) bool {
+	for available := range evidenceGroupSet([]rag.RetrievalHit{hit}) {
+		if available == group {
+			return true
+		}
+	}
+	return false
+}
+
+func compactHitForTokenBudget(hit rag.RetrievalHit, tokenBudget int) rag.RetrievalHit {
+	if tokenBudget <= 0 {
+		return hit
+	}
+	current := hit.Chunk.TokenCount
+	if current <= 0 {
+		current = estimateContextTokens(hit.Chunk.Content)
+	}
+	if current <= tokenBudget {
+		hit.Chunk.TokenCount = current
+		return hit
+	}
+	words := strings.Fields(hit.Chunk.Content)
+	if len(words) == 0 {
+		hit.Chunk.TokenCount = 0
+		return hit
+	}
+	maxWords := (tokenBudget - 1) * 3 / 4
+	if maxWords < 1 {
+		maxWords = 1
+	}
+	if len(words) > maxWords {
+		hit.Chunk.Content = strings.Join(words[:maxWords], " ")
+	}
+	hit.Chunk.TokenCount = estimateContextTokens(hit.Chunk.Content)
+	return hit
+}
+
+func estimateContextTokens(text string) int {
+	fields := strings.Fields(text)
+	if len(fields) == 0 {
+		return 0
+	}
+	return (len(fields) * 4 / 3) + 1
 }
 
 func nullableUUID(id uuid.UUID) pgtype.UUID {
