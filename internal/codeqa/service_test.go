@@ -2,6 +2,7 @@ package codeqa
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -105,8 +106,68 @@ func TestSupportGateRejectsDeletedSymbolLookup(t *testing.T) {
 	if gate.Answerable {
 		t.Fatalf("deleted symbol lookup should not be answerable: %#v", gate)
 	}
-	if gate.Reason != "missing_exact_identifier_terms" {
+	if gate.Reason != "missing_identifier" {
 		t.Fatalf("reason = %s", gate.Reason)
+	}
+}
+
+func TestSupportGateRefusesBusinessDomainFromPathShortcut(t *testing.T) {
+	gate := evaluateAnswerSupport("What production revenue API exposes?", "implementation_question", []rag.RetrievalHit{
+		codeQATestHit(uuid.New(), uuid.New(), "cmd/api/main.go", "package main\n// API server bootstrap. No revenue endpoint is defined here."),
+	})
+
+	if gate.Answerable {
+		t.Fatalf("revenue API shortcut should not be answerable: %#v", gate)
+	}
+	if gate.Reason != "missing_domain_terms" {
+		t.Fatalf("reason = %s", gate.Reason)
+	}
+	if !contains(gate.MatchedEvidence, "api_path_match") {
+		t.Fatalf("matched evidence should preserve shortcut diagnostic: %#v", gate.MatchedEvidence)
+	}
+	if !contains(gate.MissingEvidence, "revenue_domain_evidence") {
+		t.Fatalf("missing evidence = %#v", gate.MissingEvidence)
+	}
+}
+
+func TestAskCompletesMissingEvidenceGroupsBeforeGeneration(t *testing.T) {
+	userID := uuid.New()
+	repoID := uuid.New()
+	snapshotID := uuid.New()
+	store := &codeQATestStore{
+		repo: codeintel.Repository{
+			ID:            repoID,
+			OwnerUserID:   userID,
+			DefaultBranch: "main",
+		},
+	}
+	llm := &codeQATestLLM{}
+	service := NewService(store, nil, llm, codeQAFollowUpRetriever{
+		repositoryID: repoID,
+		snapshotID:   snapshotID,
+	})
+
+	response, err := service.Ask(context.Background(), AskRequest{
+		UserID:       userID,
+		RepositoryID: repoID,
+		Question:     "Explain authentication and database wiring.",
+	})
+	if err != nil {
+		t.Fatalf("Ask returned error: %v", err)
+	}
+	if response.Answer == refusalAnswer {
+		t.Fatalf("multi-concept answer was refused")
+	}
+	files := citationFiles(response.Citations)
+	if !contains(files, "internal/auth/auth.go") || !contains(files, "internal/database/connect.go") {
+		t.Fatalf("citations did not include auth and database evidence: %#v", files)
+	}
+	gate := supportGateFromTrace(t, store.trace)
+	if !gate.Answerable {
+		t.Fatalf("support gate = %#v", gate)
+	}
+	if !contains(gate.MatchedEvidence, "auth_service") || !contains(gate.MatchedEvidence, "database_connection") {
+		t.Fatalf("matched evidence = %#v", gate.MatchedEvidence)
 	}
 }
 
@@ -169,6 +230,41 @@ func (r codeQATestRetriever) Retrieve(_ context.Context, req rag.RetrievalReques
 		RetrievalConfig:    req.RetrievalConfig,
 		RetrievedChunkIDs:  retrievedChunkIDs(r.hits),
 		StageContributions: map[string]int{"dense": len(r.hits)},
+		LatencyMS:          12,
+	}, nil
+}
+
+type codeQAFollowUpRetriever struct {
+	repositoryID uuid.UUID
+	snapshotID   uuid.UUID
+}
+
+func (r codeQAFollowUpRetriever) Retrieve(_ context.Context, req rag.RetrievalRequest) (rag.RetrievalResult, error) {
+	var hits []rag.RetrievalHit
+	if strings.Contains(strings.ToLower(req.Query), "database") {
+		hits = []rag.RetrievalHit{
+			codeQATestHit(r.repositoryID, r.snapshotID, "internal/database/connect.go", "package database\nfunc Connect() {}\n// database connection setup uses pgx"),
+		}
+	} else {
+		hits = []rag.RetrievalHit{
+			codeQATestHit(r.repositoryID, r.snapshotID, "internal/auth/auth.go", "package auth\ntype JWTManager struct{}"),
+		}
+	}
+	return rag.RetrievalResult{
+		OriginalQuery:      req.Query,
+		RewrittenQuery:     req.Query,
+		RepositoryID:       r.repositoryID,
+		SnapshotID:         r.snapshotID,
+		BranchName:         req.BranchName,
+		CommitSHA:          "abc123",
+		DenseHits:          hits,
+		FusedHits:          hits,
+		RerankedHits:       hits,
+		QueryCategory:      req.QueryCategory,
+		RetrievalPath:      req.RetrievalPath,
+		RetrievalConfig:    req.RetrievalConfig,
+		RetrievedChunkIDs:  retrievedChunkIDs(hits),
+		StageContributions: map[string]int{"dense": len(hits)},
 		LatencyMS:          12,
 	}, nil
 }

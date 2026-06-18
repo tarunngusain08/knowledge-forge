@@ -341,9 +341,36 @@ func citationSymbols(citations []rag.Citation) []string {
 			seen[value] = true
 			symbols = append(symbols, value)
 		}
+		for _, value := range metadataStringList(citation.Metadata, "symbol_aliases") {
+			if value == "" || seen[value] {
+				continue
+			}
+			seen[value] = true
+			symbols = append(symbols, value)
+		}
 	}
 	sort.Strings(symbols)
 	return nonNilStrings(symbols)
+}
+
+func metadataStringList(metadata map[string]any, key string) []string {
+	if metadata == nil {
+		return nil
+	}
+	switch value := metadata[key].(type) {
+	case []string:
+		return value
+	case []any:
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			out = append(out, strings.TrimSpace(fmt.Sprint(item)))
+		}
+		return out
+	case string:
+		return []string{strings.TrimSpace(value)}
+	default:
+		return nil
+	}
 }
 
 func testFiles(citations []rag.Citation) []string {
