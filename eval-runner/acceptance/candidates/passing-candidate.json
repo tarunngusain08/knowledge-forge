@@ -1,0 +1,346 @@
+{
+  "candidate_id": "passing-validation-sample",
+  "description": "A minimal candidate result set that satisfies the redesigned acceptance gates.",
+  "refusal_results": [
+    {
+      "id": "RF-001",
+      "decision": "answer",
+      "retrieved_files": ["internal/retrieval/service.go", "internal/rag/context.go"],
+      "cited_files": ["internal/retrieval/service.go", "internal/rag/context.go"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "repository_supported_fact",
+        "matched_evidence": ["retrieval_source", "rag_context"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "RF-002",
+      "decision": "answer",
+      "retrieved_files": ["internal/httpapi/router.go", "internal/httpapi/chat_handlers.go"],
+      "cited_files": ["internal/httpapi/router.go", "internal/httpapi/chat_handlers.go"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "repository_supported_fact",
+        "matched_evidence": ["api_router", "chat_handler"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "RF-003",
+      "decision": "answer",
+      "retrieved_files": ["internal/retrieval/fts.go", "queries/documents.sql"],
+      "cited_files": ["internal/retrieval/fts.go", "queries/documents.sql"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "repository_supported_fact",
+        "matched_evidence": ["lexical_retrieval", "postgres_fts"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "RF-004",
+      "decision": "answer",
+      "retrieved_files": ["internal/repositories/service.go", "internal/httpapi/repository_handlers.go"],
+      "cited_files": ["internal/repositories/service.go", "internal/httpapi/repository_handlers.go"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "repository_supported_fact",
+        "matched_evidence": ["repository_api", "repository_store"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "RF-005",
+      "decision": "answer",
+      "retrieved_files": ["internal/codeqa/reports.go"],
+      "cited_files": ["internal/codeqa/reports.go"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "repository_supported_fact",
+        "matched_evidence": ["report_generator", "evidence_quality"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "FA-001",
+      "decision": "refuse",
+      "refusal_reason": "missing_domain_terms",
+      "retrieved_files": ["cmd/api/main.go"],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_domain_terms",
+        "matched_evidence": ["api_path_match"],
+        "missing_evidence": ["revenue_domain_evidence"]
+      }
+    },
+    {
+      "id": "FA-002",
+      "decision": "refuse",
+      "refusal_reason": "missing_domain_terms",
+      "retrieved_files": ["ui/web/src/App.tsx"],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_domain_terms",
+        "matched_evidence": ["ui_path_match"],
+        "missing_evidence": ["payroll_domain_evidence"]
+      }
+    },
+    {
+      "id": "FA-003",
+      "decision": "refuse",
+      "refusal_reason": "missing_domain_terms",
+      "retrieved_files": ["internal/httpapi/router.go"],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_domain_terms",
+        "matched_evidence": ["api_path_match"],
+        "missing_evidence": ["customer_revenue_endpoint_evidence"]
+      }
+    },
+    {
+      "id": "FA-004",
+      "decision": "refuse",
+      "refusal_reason": "external_fact",
+      "retrieved_files": [],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "external_fact",
+        "matched_evidence": [],
+        "missing_evidence": ["repository_snapshot_external_fact_evidence"]
+      }
+    },
+    {
+      "id": "FA-005",
+      "decision": "refuse",
+      "refusal_reason": "prompt_injection",
+      "retrieved_files": [],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "prompt_injection",
+        "matched_evidence": [],
+        "missing_evidence": ["authorized_secret_disclosure_evidence"]
+      }
+    },
+    {
+      "id": "FA-006",
+      "decision": "refuse",
+      "refusal_reason": "missing_identifier",
+      "retrieved_files": [],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_identifier",
+        "matched_evidence": [],
+        "missing_evidence": ["deleted_symbol_xyz_evidence"]
+      }
+    }
+  ],
+  "answer_relevance_results": [
+    {
+      "id": "AR-001",
+      "decision": "answer",
+      "retrieved_files": ["internal/auth/auth.go", "internal/auth/middleware.go"],
+      "cited_files": ["internal/auth/auth.go", "internal/auth/middleware.go"],
+      "cited_symbols": ["JWTManager", "Middleware"],
+      "answer_facts": ["authentication uses JWT handling", "middleware validates authenticated requests"],
+      "claim_support": {
+        "authentication uses JWT handling": true,
+        "middleware validates authenticated requests": true
+      },
+      "evidence_groups": {
+        "auth_service": {"status": "supported", "files": ["internal/auth/auth.go"]},
+        "auth_middleware": {"status": "supported", "files": ["internal/auth/middleware.go"]}
+      }
+    },
+    {
+      "id": "AR-002",
+      "decision": "answer",
+      "retrieved_files": ["internal/auth/auth.go", "internal/database/connect.go", "internal/db/db.go"],
+      "cited_files": ["internal/auth/auth.go", "internal/database/connect.go", "internal/db/db.go"],
+      "cited_symbols": ["JWTManager", "Connect"],
+      "answer_facts": ["authentication is implemented separately from database connection setup", "database access uses pgx/sqlc generated code"],
+      "claim_support": {
+        "authentication is implemented separately from database connection setup": true,
+        "database access uses pgx/sqlc generated code": true
+      },
+      "evidence_groups": {
+        "auth_service": {"status": "supported", "files": ["internal/auth/auth.go"]},
+        "database_connection": {"status": "supported", "files": ["internal/database/connect.go", "internal/db/db.go"]}
+      }
+    },
+    {
+      "id": "AR-003",
+      "decision": "answer",
+      "retrieved_files": ["internal/retrieval/code_service.go", "internal/retrieval/rrf.go", "internal/rag/context.go"],
+      "cited_files": ["internal/retrieval/code_service.go", "internal/retrieval/rrf.go", "internal/rag/context.go"],
+      "cited_symbols": ["CodeRetrievalService", "FuseRRF"],
+      "answer_facts": ["retrieval gathers candidates", "RRF combines ranked candidates", "context is assembled for answer generation"],
+      "claim_support": {
+        "retrieval gathers candidates": true,
+        "RRF combines ranked candidates": true,
+        "context is assembled for answer generation": true
+      },
+      "evidence_groups": {
+        "dense_or_code_retrieval": {"status": "supported", "files": ["internal/retrieval/code_service.go"]},
+        "fusion": {"status": "supported", "files": ["internal/retrieval/rrf.go"]},
+        "context_assembly": {"status": "supported", "files": ["internal/rag/context.go"]}
+      }
+    },
+    {
+      "id": "AR-004",
+      "decision": "answer",
+      "retrieved_files": ["internal/codeqa/reports.go", "internal/codeqa/service.go"],
+      "cited_files": ["internal/codeqa/reports.go", "internal/codeqa/service.go"],
+      "cited_symbols": ["DeepDiveReport", "ReportSection"],
+      "answer_facts": ["reports are generated as sections", "report claims must be tied to citations or missing context"],
+      "claim_support": {
+        "reports are generated as sections": true,
+        "report claims must be tied to citations or missing context": true
+      },
+      "evidence_groups": {
+        "report_generator": {"status": "supported", "files": ["internal/codeqa/reports.go"]},
+        "repo_qa_service": {"status": "supported", "files": ["internal/codeqa/service.go"]}
+      }
+    }
+  ],
+  "architecture_results": [
+    {
+      "fixture_id": "ARCH-POS-001",
+      "layers": [
+        {
+          "name": "api",
+          "confidence": "High",
+          "evidence_type": "source_code",
+          "files": ["cmd/api/main.go", "internal/httpapi/router.go"],
+          "packages": ["cmd/api", "internal/httpapi"],
+          "line_ranges": ["cmd/api/main.go:1-35", "internal/httpapi/router.go:1-80"],
+          "sufficiency": "server startup and route registration"
+        },
+        {
+          "name": "ui",
+          "confidence": "High",
+          "evidence_type": "source_code",
+          "files": ["ui/web/src/App.tsx"],
+          "packages": ["ui/web"],
+          "line_ranges": ["ui/web/src/App.tsx:1-200"],
+          "sufficiency": "application view and report rendering"
+        },
+        {
+          "name": "retrieval",
+          "confidence": "High",
+          "evidence_type": "source_code",
+          "files": ["internal/retrieval/service.go"],
+          "packages": ["internal/retrieval"],
+          "line_ranges": ["internal/retrieval/service.go:1-160"],
+          "sufficiency": "retrieval orchestration"
+        }
+      ]
+    },
+    {
+      "fixture_id": "ARCH-NEG-001",
+      "layers": []
+    },
+    {
+      "fixture_id": "ARCH-NEG-002",
+      "layers": []
+    }
+  ],
+  "metric_results": [
+    {
+      "id": "MET-001",
+      "metric": "refusal_accuracy",
+      "purpose": "Measures whether unsupported questions are refused.",
+      "limitations": ["does not measure false refusals", "can be gamed by refusing everything"],
+      "anti_gaming_checks": ["pair_with_false_refusal_rate", "include_answerable_acronym_questions"],
+      "used_as_acceptance_pass": true,
+      "paired_checks": ["false_refusal_rate", "false_answer_rate"]
+    },
+    {
+      "id": "MET-002",
+      "metric": "answer_relevance_accuracy",
+      "purpose": "Measures whether answerable questions are relevant and supported.",
+      "limitations": ["labels are mandatory", "partial relevance is not a pass"],
+      "anti_gaming_checks": ["require_evidence_groups", "require_expected_answer_facts", "missing_labels_fail"],
+      "used_as_acceptance_pass": true,
+      "unlabeled_rows_count": 0,
+      "partial_relevance_accepted_rows": 0
+    },
+    {
+      "id": "MET-003",
+      "metric": "section_support_coverage",
+      "purpose": "Diagnostic only: measures whether sections have findings and citations.",
+      "limitations": ["does not prove citations support claims", "must not be acceptance-grade alone"],
+      "anti_gaming_checks": ["cannot_be_used_as_grounding", "flag_reused_unrelated_citations"],
+      "used_as_acceptance_pass": false,
+      "used_as_grounding": false
+    },
+    {
+      "id": "MET-004",
+      "metric": "claim_grounding_coverage",
+      "purpose": "Measures claim-level support by cited evidence.",
+      "limitations": ["unavailable without claim-to-citation labels", "can be gamed by making trivial claims"],
+      "anti_gaming_checks": ["claim_labels_required", "citation_line_ranges_required", "unavailable_fails_acceptance"],
+      "status": "available",
+      "used_as_acceptance_pass": true,
+      "claim_to_citation_labels_present": true,
+      "citation_line_ranges_present": true,
+      "claim_grounding_mappings": [
+        {
+          "claim": "authentication uses JWT handling",
+          "citation_id": "AR-001-C1",
+          "file": "internal/auth/auth.go",
+          "line_range": "internal/auth/auth.go:1-80",
+          "evidence": "JWTManager symbol evidence supports authentication claim"
+        },
+        {
+          "claim": "reports are generated as sections",
+          "citation_id": "AR-004-C1",
+          "file": "internal/codeqa/reports.go",
+          "line_range": "internal/codeqa/reports.go:1-120",
+          "evidence": "DeepDiveReport and ReportSection evidence supports report generation claim"
+        }
+      ]
+    },
+    {
+      "id": "MET-005",
+      "metric": "architecture_layer_detection",
+      "purpose": "Measures architecture layers with sufficient source evidence.",
+      "limitations": ["does not prove runtime behavior", "can be gamed by path prefixes"],
+      "anti_gaming_checks": ["source_code_evidence_required", "docs_only_negative_fixture", "directory_only_negative_fixture"],
+      "used_as_acceptance_pass": true
+    }
+  ],
+  "benchmark_metadata": {
+    "rows": [
+      {"id": "RF-001", "labels_complete": true},
+      {"id": "RF-002", "labels_complete": true},
+      {"id": "RF-003", "labels_complete": true},
+      {"id": "RF-004", "labels_complete": true},
+      {"id": "RF-005", "labels_complete": true},
+      {"id": "FA-001", "labels_complete": true},
+      {"id": "FA-002", "labels_complete": true},
+      {"id": "FA-003", "labels_complete": true},
+      {"id": "FA-004", "labels_complete": true},
+      {"id": "FA-005", "labels_complete": true},
+      {"id": "FA-006", "labels_complete": true},
+      {"id": "AR-001", "labels_complete": true},
+      {"id": "AR-002", "labels_complete": true},
+      {"id": "AR-003", "labels_complete": true},
+      {"id": "AR-004", "labels_complete": true},
+      {"id": "ARCH-POS-001", "labels_complete": true},
+      {"id": "ARCH-NEG-001", "labels_complete": true},
+      {"id": "ARCH-NEG-002", "labels_complete": true},
+      {"id": "MET-001", "labels_complete": true},
+      {"id": "MET-002", "labels_complete": true},
+      {"id": "MET-003", "labels_complete": true},
+      {"id": "MET-004", "labels_complete": true},
+      {"id": "MET-005", "labels_complete": true}
+    ]
+  }
+}

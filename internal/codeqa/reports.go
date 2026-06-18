@@ -9,20 +9,23 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/tarunngusain08/knowledge-forge/internal/codeintel"
 	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
 
 const maxDeepDiveTargetedRetrievals = 4
 
 type DeepDiveReportResponse struct {
-	Summary         string                  `json:"summary"`
-	Sections        []DeepDiveReportSection `json:"sections"`
-	EvidenceQuality DeepDiveEvidenceQuality `json:"evidence_quality"`
-	TraceIDs        []uuid.UUID             `json:"trace_ids"`
-	Provenance      AnswerProvenance        `json:"provenance"`
-	Model           string                  `json:"model"`
-	GeneratedAt     time.Time               `json:"generated_at"`
-	Markdown        string                  `json:"markdown"`
+	Summary                string                  `json:"summary"`
+	Sections               []DeepDiveReportSection `json:"sections"`
+	EvidenceQuality        DeepDiveEvidenceQuality `json:"evidence_quality"`
+	TraceIDs               []uuid.UUID             `json:"trace_ids"`
+	Provenance             AnswerProvenance        `json:"provenance"`
+	Model                  string                  `json:"model"`
+	GeneratedAt            time.Time               `json:"generated_at"`
+	Markdown               string                  `json:"markdown"`
+	ClaimGroundingMappings []ClaimGroundingMapping `json:"claim_grounding_mappings"`
+	ClaimGroundingCoverage float64                 `json:"claim_grounding_coverage"`
 }
 
 type DeepDiveReportSection struct {
@@ -39,13 +42,27 @@ type DeepDiveReportSection struct {
 }
 
 type DeepDiveEvidenceQuality struct {
-	FilesExamined    int                `json:"files_examined"`
-	CitedFiles       []string           `json:"cited_files"`
-	CitedSymbols     []string           `json:"cited_symbols"`
-	CitationCount    int                `json:"citation_count"`
-	EvidenceCoverage float64            `json:"evidence_coverage"`
-	MissingContext   []string           `json:"missing_context"`
-	Confidence       EvidenceConfidence `json:"confidence"`
+	FilesExamined          int                     `json:"files_examined"`
+	CitedFiles             []string                `json:"cited_files"`
+	CitedSymbols           []string                `json:"cited_symbols"`
+	CitationCount          int                     `json:"citation_count"`
+	EvidenceCoverage       float64                 `json:"evidence_coverage"`
+	ClaimGroundingCoverage float64                 `json:"claim_grounding_coverage"`
+	ClaimGroundingMappings []ClaimGroundingMapping `json:"claim_grounding_mappings"`
+	MissingContext         []string                `json:"missing_context"`
+	Confidence             EvidenceConfidence      `json:"confidence"`
+}
+
+type ClaimGroundingMapping struct {
+	Claim      string `json:"claim"`
+	CitationID string `json:"citation_id"`
+	File       string `json:"file"`
+	LineRange  string `json:"line_range"`
+	Evidence   string `json:"evidence"`
+}
+
+type architectureChunkStore interface {
+	ListArchitectureChunks(ctx context.Context, repositoryID, snapshotID uuid.UUID) ([]codeintel.Chunk, error)
 }
 
 type reportSectionSpec struct {
@@ -74,11 +91,19 @@ func (s *Service) GenerateDeepDiveReport(ctx context.Context, req WorkflowReques
 	if err != nil {
 		return DeepDiveReportResponse{}, err
 	}
+	architectureAsk := shared
+	architectureCitations, err := s.architectureEvidenceCitations(ctx, shared.Provenance)
+	if err != nil {
+		return DeepDiveReportResponse{}, err
+	}
+	if len(architectureCitations) > 0 {
+		architectureAsk.Citations = mergeCitations(architectureAsk.Citations, architectureCitations)
+	}
 
 	specs := deepDiveReportSectionSpecs()
 	sectionAsks := []reportSectionAsk{{
 		spec:     specs[0],
-		ask:      shared,
+		ask:      architectureAsk,
 		targeted: false,
 	}}
 	targetedCount := 0
@@ -175,15 +200,21 @@ func buildDeepDiveReportResponse(shared AskResponse, sectionAsks []reportSection
 	missingSection := buildDeepDiveMissingContextSection(shared, sections)
 	sections = append(sections, missingSection)
 	quality := buildDeepDiveEvidenceQuality(sections)
+	mappings := buildClaimGroundingMappings(sections)
+	claimCoverage := claimGroundingCoverage(sections, mappings)
+	quality.ClaimGroundingMappings = nonNilClaimGroundingMappings(mappings)
+	quality.ClaimGroundingCoverage = claimCoverage
 	sections = append(sections, buildDeepDiveEvidenceQualitySection(shared, quality))
 	response := DeepDiveReportResponse{
-		Summary:         deepDiveSummary(shared, quality),
-		Sections:        sections,
-		EvidenceQuality: quality,
-		TraceIDs:        deepDiveTraceIDs(sections),
-		Provenance:      shared.Provenance,
-		Model:           shared.Model,
-		GeneratedAt:     generatedAt,
+		Summary:                deepDiveSummary(shared, quality),
+		Sections:               sections,
+		EvidenceQuality:        quality,
+		TraceIDs:               deepDiveTraceIDs(sections),
+		Provenance:             shared.Provenance,
+		Model:                  shared.Model,
+		GeneratedAt:            generatedAt,
+		ClaimGroundingMappings: nonNilClaimGroundingMappings(mappings),
+		ClaimGroundingCoverage: claimCoverage,
 	}
 	response.Markdown = formatDeepDiveMarkdown(response)
 	return response
@@ -244,6 +275,9 @@ func deepDiveFindings(ask AskResponse, missingOnly bool) []string {
 func architectureFindingsFromCitations(citations []rag.Citation) []string {
 	layerEvidence := map[string]string{}
 	for _, citation := range citations {
+		if !sourceCodeArchitectureCitation(citation) {
+			continue
+		}
 		path := strings.TrimSpace(citation.Path)
 		if path == "" {
 			continue
@@ -273,6 +307,74 @@ func architectureFindingsFromCitations(citations []rag.Citation) []string {
 		findings = append(findings, fmt.Sprintf("Repository structure identifies the %s through `%s`.", label, path))
 	}
 	return findings
+}
+
+func (s *Service) architectureEvidenceCitations(ctx context.Context, provenance AnswerProvenance) ([]rag.Citation, error) {
+	store, ok := s.repos.(architectureChunkStore)
+	if !ok || provenance.RepositoryID == uuid.Nil || provenance.SnapshotID == uuid.Nil {
+		return []rag.Citation{}, nil
+	}
+	chunks, err := store.ListArchitectureChunks(ctx, provenance.RepositoryID, provenance.SnapshotID)
+	if err != nil {
+		return nil, err
+	}
+	citations := make([]rag.Citation, 0, len(chunks))
+	for _, chunk := range chunks {
+		if !sourceCodeArchitecturePath(chunk.Path) || architectureLayerForPath(chunk.Path) == "" {
+			continue
+		}
+		metadata := chunk.Metadata
+		if metadata == nil {
+			metadata = map[string]any{}
+		}
+		metadata["path"] = chunk.Path
+		metadata["start_line"] = chunk.StartLine
+		metadata["end_line"] = chunk.EndLine
+		metadata["evidence_groups"] = architectureEvidenceGroupsForPath(chunk.Path)
+		citations = append(citations, rag.Citation{
+			ChunkID:      chunk.ID,
+			DocumentID:   chunk.FileID,
+			RepositoryID: chunk.RepositoryID,
+			SnapshotID:   chunk.SnapshotID,
+			BranchName:   provenance.BranchName,
+			CommitSHA:    provenance.CommitSHA,
+			Path:         chunk.Path,
+			StartLine:    chunk.StartLine,
+			EndLine:      chunk.EndLine,
+			Excerpt:      excerptForEvidence(chunk.Content),
+			Metadata:     metadata,
+		})
+	}
+	return mergeCitations(nil, citations), nil
+}
+
+func sourceCodeArchitectureCitation(citation rag.Citation) bool {
+	return citation.StartLine > 0 && citation.EndLine >= citation.StartLine && sourceCodeArchitecturePath(citation.Path)
+}
+
+func sourceCodeArchitecturePath(path string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(path))
+	if normalized == "" || strings.HasSuffix(normalized, ".md") || strings.HasSuffix(normalized, ".txt") || strings.HasSuffix(normalized, ".keep") {
+		return false
+	}
+	return strings.HasSuffix(normalized, ".go") ||
+		strings.HasSuffix(normalized, ".ts") ||
+		strings.HasSuffix(normalized, ".tsx") ||
+		strings.HasSuffix(normalized, ".py") ||
+		strings.HasSuffix(normalized, ".sql")
+}
+
+func architectureEvidenceGroupsForPath(path string) []string {
+	switch architectureLayerForPath(path) {
+	case "API layer":
+		return []string{"api_layer"}
+	case "UI layer":
+		return []string{"ui_layer"}
+	case "retrieval/RAG layer":
+		return []string{"retrieval_layer", "rag_context"}
+	default:
+		return []string{}
+	}
 }
 
 func architectureLayerForPath(path string) string {
@@ -383,6 +485,7 @@ func buildDeepDiveEvidenceQualitySection(shared AskResponse, quality DeepDiveEvi
 		fmt.Sprintf("Files examined: %d", quality.FilesExamined),
 		fmt.Sprintf("Unique citations: %d", quality.CitationCount),
 		fmt.Sprintf("Evidence coverage: %.0f%%", quality.EvidenceCoverage*100),
+		fmt.Sprintf("Claim grounding coverage: %.0f%%", quality.ClaimGroundingCoverage*100),
 		fmt.Sprintf("Confidence: %s", quality.Confidence.Label),
 	}
 	if len(quality.CitedFiles) > 0 {
@@ -437,6 +540,101 @@ func uniqueDeepDiveCitations(sections []DeepDiveReportSection) []rag.Citation {
 		}
 	}
 	return nonNilCitations(citations)
+}
+
+func mergeCitations(primary, secondary []rag.Citation) []rag.Citation {
+	seen := map[string]bool{}
+	merged := make([]rag.Citation, 0, len(primary)+len(secondary))
+	for _, citation := range append(primary, secondary...) {
+		key := deepDiveCitationKey(citation)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		merged = append(merged, citation)
+	}
+	return nonNilCitations(merged)
+}
+
+func deepDiveCitationKey(citation rag.Citation) string {
+	if citation.ChunkID != uuid.Nil {
+		return citation.ChunkID.String()
+	}
+	return fmt.Sprintf("%s:%d:%d:%s", citation.Path, citation.StartLine, citation.EndLine, citation.Excerpt)
+}
+
+func buildClaimGroundingMappings(sections []DeepDiveReportSection) []ClaimGroundingMapping {
+	var mappings []ClaimGroundingMapping
+	for _, section := range sections {
+		if section.ID == "missing_context" || section.ID == "evidence_quality" || len(section.Citations) == 0 {
+			continue
+		}
+		for _, finding := range section.Findings {
+			claim := strings.TrimSpace(finding)
+			if claim == "" {
+				continue
+			}
+			for _, citation := range section.Citations {
+				if citation.Path == "" || citation.StartLine == 0 || citation.EndLine == 0 {
+					continue
+				}
+				mappings = append(mappings, ClaimGroundingMapping{
+					Claim:      claim,
+					CitationID: citationID(citation),
+					File:       citation.Path,
+					LineRange:  fmt.Sprintf("%s:%d-%d", citation.Path, citation.StartLine, citation.EndLine),
+					Evidence:   excerptForEvidence(citation.Excerpt),
+				})
+			}
+		}
+	}
+	return nonNilClaimGroundingMappings(mappings)
+}
+
+func claimGroundingCoverage(sections []DeepDiveReportSection, mappings []ClaimGroundingMapping) float64 {
+	totalClaims := 0
+	supported := map[string]bool{}
+	for _, mapping := range mappings {
+		if mapping.Claim != "" {
+			supported[mapping.Claim] = true
+		}
+	}
+	for _, section := range sections {
+		if section.ID == "missing_context" || section.ID == "evidence_quality" {
+			continue
+		}
+		for _, finding := range section.Findings {
+			if strings.TrimSpace(finding) != "" {
+				totalClaims++
+			}
+		}
+	}
+	if totalClaims == 0 {
+		return 0
+	}
+	return round2(float64(len(supported)) / float64(totalClaims))
+}
+
+func citationID(citation rag.Citation) string {
+	if citation.ChunkID != uuid.Nil {
+		return citation.ChunkID.String()
+	}
+	return fmt.Sprintf("%s:%d-%d", citation.Path, citation.StartLine, citation.EndLine)
+}
+
+func excerptForEvidence(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) <= 240 {
+		return value
+	}
+	return strings.TrimSpace(value[:240])
+}
+
+func nonNilClaimGroundingMappings(values []ClaimGroundingMapping) []ClaimGroundingMapping {
+	if values == nil {
+		return []ClaimGroundingMapping{}
+	}
+	return values
 }
 
 func deepDiveTraceIDs(sections []DeepDiveReportSection) []uuid.UUID {

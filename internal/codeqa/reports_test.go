@@ -57,6 +57,13 @@ func TestBuildDeepDiveReportResponseIncludesEvidenceQualityAndMarkdown(t *testin
 	if report.EvidenceQuality.CitedSymbols == nil || report.TraceIDs == nil {
 		t.Fatalf("report should normalize nullable arrays: quality=%#v traces=%#v", report.EvidenceQuality, report.TraceIDs)
 	}
+	if len(report.ClaimGroundingMappings) == 0 || report.ClaimGroundingCoverage == 0 {
+		t.Fatalf("report should expose claim grounding: mappings=%#v coverage=%.2f", report.ClaimGroundingMappings, report.ClaimGroundingCoverage)
+	}
+	firstMapping := report.ClaimGroundingMappings[0]
+	if firstMapping.Claim == "" || firstMapping.CitationID == "" || firstMapping.File == "" || firstMapping.LineRange == "" || firstMapping.Evidence == "" {
+		t.Fatalf("claim grounding mapping missing proof fields: %#v", firstMapping)
+	}
 	if len(report.TraceIDs) != 2 {
 		t.Fatalf("trace ids = %#v", report.TraceIDs)
 	}
@@ -141,6 +148,24 @@ func TestBuildDeepDiveReportResponseImprovesEvidenceCoverageFromAuditBaseline(t 
 	}
 	if report.EvidenceQuality.EvidenceCoverage < 0.56*1.25 {
 		t.Fatalf("evidence coverage did not improve 25%% from audit baseline: %.2f", report.EvidenceQuality.EvidenceCoverage)
+	}
+}
+
+func TestArchitectureFindingsRequireSourceCodeEvidence(t *testing.T) {
+	repoID := uuid.New()
+	snapshotID := uuid.New()
+	findings := architectureFindingsFromCitations([]rag.Citation{
+		reportCitation(repoID, snapshotID, "cmd/api/README.md", 1, 10, "abc123", "docs say API exists"),
+		reportCitation(repoID, snapshotID, "ui/web/.keep", 1, 1, "abc123", "directory marker"),
+		reportCitation(repoID, snapshotID, "internal/retrieval/code_service.go", 10, 30, "abc123", "retrieval source"),
+	})
+
+	joined := strings.Join(findings, "\n")
+	if strings.Contains(joined, "API layer") || strings.Contains(joined, "UI layer") {
+		t.Fatalf("docs or directory markers should not define architecture:\n%s", joined)
+	}
+	if !strings.Contains(joined, "retrieval/RAG layer") {
+		t.Fatalf("source-code retrieval layer missing:\n%s", joined)
 	}
 }
 

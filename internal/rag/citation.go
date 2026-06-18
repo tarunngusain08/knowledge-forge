@@ -3,6 +3,8 @@ package rag
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/google/uuid"
 )
@@ -12,6 +14,7 @@ func CitationFromHit(hit RetrievalHit, excerpt string) Citation {
 	if metadata == nil {
 		metadata = map[string]any{}
 	}
+	metadata = enrichedCitationMetadata(metadata)
 	return Citation{
 		ChunkID:      hit.Chunk.ID,
 		DocumentID:   hit.Chunk.DocumentID,
@@ -31,6 +34,83 @@ func CitationFromHit(hit RetrievalHit, excerpt string) Citation {
 		RerankScore:  hit.RerankScore,
 		Metadata:     metadata,
 	}
+}
+
+func enrichedCitationMetadata(input map[string]any) map[string]any {
+	metadata := map[string]any{}
+	for key, value := range input {
+		metadata[key] = value
+	}
+	var aliases []string
+	for _, key := range []string{"symbol", "symbol_name", "qualified_name"} {
+		symbol := stringValue(metadata, key)
+		aliases = append(aliases, symbolAliases(symbol)...)
+	}
+	if len(aliases) > 0 {
+		metadata["symbol_aliases"] = uniqueMetadataStrings(aliases)
+	}
+	return metadata
+}
+
+func symbolAliases(symbol string) []string {
+	symbol = strings.TrimSpace(symbol)
+	if symbol == "" {
+		return nil
+	}
+	parts := splitIdentifierWords(symbol)
+	if len(parts) < 3 {
+		return nil
+	}
+	var aliases []string
+	for start := 0; start < len(parts); start++ {
+		for end := start + 2; end <= len(parts); end++ {
+			if start == 0 && end == len(parts) {
+				continue
+			}
+			aliases = append(aliases, strings.Join(parts[start:end], ""))
+		}
+	}
+	return aliases
+}
+
+func splitIdentifierWords(value string) []string {
+	var parts []string
+	var current strings.Builder
+	var previous rune
+	for _, r := range value {
+		if !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
+			if current.Len() > 0 {
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+			previous = 0
+			continue
+		}
+		if current.Len() > 0 && unicode.IsLower(previous) && unicode.IsUpper(r) {
+			parts = append(parts, current.String())
+			current.Reset()
+		}
+		current.WriteRune(r)
+		previous = r
+	}
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+	return parts
+}
+
+func uniqueMetadataStrings(values []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
 }
 
 func stringValue(metadata map[string]any, key string) string {

@@ -95,26 +95,26 @@ type RetrievalTrace struct {
 }
 
 type CreateFeedbackInput struct {
-	UserID             uuid.UUID
-	TraceID            uuid.UUID
-	AnswerCorrect      bool
-	CitationCorrect    bool
-	MissingFile        bool
-	MissingSymbol      bool
-	HallucinatedClaim  bool
+	UserID            uuid.UUID
+	TraceID           uuid.UUID
+	AnswerCorrect     bool
+	CitationCorrect   bool
+	MissingFile       bool
+	MissingSymbol     bool
+	HallucinatedClaim bool
 	ShouldHaveRefused bool
 	ReviewerNote      string
 }
 
 type Feedback struct {
-	ID                 uuid.UUID  `json:"id"`
-	TraceID            uuid.UUID  `json:"trace_id"`
-	UserID             *uuid.UUID `json:"user_id,omitempty"`
-	AnswerCorrect      bool       `json:"answer_correct"`
-	CitationCorrect    bool       `json:"citation_correct"`
-	MissingFile        bool       `json:"missing_file"`
-	MissingSymbol      bool       `json:"missing_symbol"`
-	HallucinatedClaim  bool       `json:"hallucinated_claim"`
+	ID                uuid.UUID  `json:"id"`
+	TraceID           uuid.UUID  `json:"trace_id"`
+	UserID            *uuid.UUID `json:"user_id,omitempty"`
+	AnswerCorrect     bool       `json:"answer_correct"`
+	CitationCorrect   bool       `json:"citation_correct"`
+	MissingFile       bool       `json:"missing_file"`
+	MissingSymbol     bool       `json:"missing_symbol"`
+	HallucinatedClaim bool       `json:"hallucinated_claim"`
 	ShouldHaveRefused bool       `json:"should_have_refused"`
 	ReviewerNote      string     `json:"reviewer_note"`
 	CreatedAt         time.Time  `json:"created_at"`
@@ -332,6 +332,43 @@ WHERE repository_id = $1 AND id = $2
 	return scanChunk(row)
 }
 
+func (s *Store) ListArchitectureChunks(ctx context.Context, repositoryID, snapshotID uuid.UUID) ([]codeintel.Chunk, error) {
+	rows, err := s.pool.Query(ctx, `
+SELECT id, repository_id, snapshot_id, file_id, file_version_id, symbol_id, chunk_index,
+       chunk_type, path, language, start_line, end_line, content, token_count, metadata
+FROM repo_file_chunks
+WHERE repository_id = $1
+  AND snapshot_id = $2
+  AND start_line > 0
+  AND end_line >= start_line
+  AND (
+    path = 'cmd/api/main.go'
+    OR path = 'internal/httpapi/router.go'
+    OR path = 'ui/web/src/App.tsx'
+    OR path LIKE 'internal/retrieval/%'
+    OR path LIKE 'internal/rag/%'
+    OR path LIKE 'internal/codeqa/%'
+  )
+ORDER BY
+  CASE
+    WHEN path = 'cmd/api/main.go' THEN 1
+    WHEN path = 'internal/httpapi/router.go' THEN 2
+    WHEN path = 'ui/web/src/App.tsx' THEN 3
+    WHEN path LIKE 'internal/retrieval/%' THEN 4
+    WHEN path LIKE 'internal/rag/%' THEN 5
+    WHEN path LIKE 'internal/codeqa/%' THEN 6
+    ELSE 99
+  END,
+  chunk_index
+LIMIT 24
+`, repositoryID, snapshotID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanChunks(rows)
+}
+
 func (s *Store) CreateRetrievalTrace(ctx context.Context, input RetrievalTraceInput) (uuid.UUID, error) {
 	id := uuid.New()
 	_, err := s.pool.Exec(ctx, `
@@ -523,6 +560,22 @@ func scanChunk(row pgx.Row) (codeintel.Chunk, error) {
 	chunk.SymbolID = uuidPtr(symbolID)
 	chunk.Metadata = decodeMetadata(metadata)
 	return chunk, err
+}
+
+func scanChunks(rows pgx.Rows) ([]codeintel.Chunk, error) {
+	var chunks []codeintel.Chunk
+	for rows.Next() {
+		var chunk codeintel.Chunk
+		var symbolID pgtype.UUID
+		var metadata []byte
+		if err := rows.Scan(&chunk.ID, &chunk.RepositoryID, &chunk.SnapshotID, &chunk.FileID, &chunk.FileVersionID, &symbolID, &chunk.ChunkIndex, &chunk.ChunkType, &chunk.Path, &chunk.Language, &chunk.StartLine, &chunk.EndLine, &chunk.Content, &chunk.TokenCount, &metadata); err != nil {
+			return nil, err
+		}
+		chunk.SymbolID = uuidPtr(symbolID)
+		chunk.Metadata = decodeMetadata(metadata)
+		chunks = append(chunks, chunk)
+	}
+	return chunks, rows.Err()
 }
 
 func mustJSON(value any) []byte {

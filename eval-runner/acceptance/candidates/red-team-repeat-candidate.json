@@ -1,0 +1,222 @@
+{
+  "candidate_id": "red-team-repeat-negative-control",
+  "description": "A deliberately bad candidate result set that repeats the failures found by the red-team audit. Validator tests must reject this file.",
+  "refusal_results": [
+    {
+      "id": "RF-001",
+      "decision": "refuse",
+      "refusal_reason": "missing_identifier",
+      "retrieved_files": ["internal/retrieval/service.go"],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_identifier",
+        "matched_evidence": ["retrieval_source"],
+        "missing_evidence": ["RAG"]
+      }
+    },
+    {
+      "id": "RF-002",
+      "decision": "refuse",
+      "refusal_reason": "missing_identifier",
+      "retrieved_files": ["internal/httpapi/router.go"],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": false,
+        "reason": "missing_identifier",
+        "matched_evidence": ["api_router"],
+        "missing_evidence": ["HTTP"]
+      }
+    },
+    {
+      "id": "FA-001",
+      "decision": "answer",
+      "retrieved_files": ["cmd/api/main.go"],
+      "cited_files": ["cmd/api/main.go"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "identifier_match",
+        "matched_evidence": ["api_path_match"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "FA-002",
+      "decision": "answer",
+      "retrieved_files": ["ui/web/src/App.tsx"],
+      "cited_files": ["ui/web/src/App.tsx"],
+      "support_gate": {
+        "answerable": true,
+        "reason": "identifier_match",
+        "matched_evidence": ["ui_path_match"],
+        "missing_evidence": []
+      }
+    },
+    {
+      "id": "FA-004",
+      "decision": "answer",
+      "retrieved_files": [],
+      "cited_files": [],
+      "support_gate": {
+        "answerable": true,
+        "reason": "model_world_knowledge",
+        "matched_evidence": [],
+        "missing_evidence": []
+      }
+    }
+  ],
+  "answer_relevance_results": [
+    {
+      "id": "AR-001",
+      "decision": "answer",
+      "retrieved_files": ["ui/web/src/App.tsx"],
+      "cited_files": ["ui/web/src/App.tsx"],
+      "answer_facts": ["the UI uses a report tab"],
+      "claim_support": {
+        "authentication uses JWT handling": false,
+        "middleware validates authenticated requests": false
+      },
+      "evidence_groups": {
+        "auth_service": {"status": "missing", "files": []},
+        "auth_middleware": {"status": "missing", "files": []}
+      }
+    },
+    {
+      "id": "AR-002",
+      "decision": "answer",
+      "retrieved_files": ["internal/auth/auth.go"],
+      "cited_files": ["internal/auth/auth.go"],
+      "answer_facts": ["authentication is implemented separately from database connection setup"],
+      "claim_support": {
+        "authentication is implemented separately from database connection setup": true,
+        "database access uses pgx/sqlc generated code": false
+      },
+      "evidence_groups": {
+        "auth_service": {"status": "supported", "files": ["internal/auth/auth.go"]},
+        "database_connection": {"status": "missing", "files": []}
+      }
+    }
+  ],
+  "architecture_results": [
+    {
+      "fixture_id": "ARCH-POS-001",
+      "layers": [
+        {
+          "name": "api",
+          "confidence": "High",
+          "evidence_type": "source_code",
+          "files": ["cmd/api/main.go"],
+          "packages": ["cmd/api"],
+          "line_ranges": ["cmd/api/main.go:1-30"],
+          "sufficiency": "server startup"
+        }
+      ]
+    },
+    {
+      "fixture_id": "ARCH-NEG-001",
+      "layers": [
+        {
+          "name": "api",
+          "confidence": "High",
+          "evidence_type": "doc",
+          "files": ["cmd/api/README.md"],
+          "packages": ["cmd/api"],
+          "line_ranges": [],
+          "sufficiency": "README path says API"
+        },
+        {
+          "name": "ui",
+          "confidence": "High",
+          "evidence_type": "doc",
+          "files": ["ui/web/README.md"],
+          "packages": ["ui/web"],
+          "line_ranges": [],
+          "sufficiency": "README path says UI"
+        },
+        {
+          "name": "retrieval",
+          "confidence": "High",
+          "evidence_type": "doc",
+          "files": ["internal/retrieval/README.md"],
+          "packages": ["internal/retrieval"],
+          "line_ranges": [],
+          "sufficiency": "README path says retrieval"
+        }
+      ]
+    },
+    {
+      "fixture_id": "ARCH-NEG-002",
+      "layers": [
+        {
+          "name": "retrieval",
+          "confidence": "High",
+          "evidence_type": "directory",
+          "files": ["internal/retrieval/.keep"],
+          "packages": ["internal/retrieval"],
+          "line_ranges": [],
+          "sufficiency": "directory prefix only"
+        }
+      ]
+    }
+  ],
+  "metric_results": [
+    {
+      "id": "MET-001",
+      "metric": "refusal_accuracy",
+      "purpose": "Measures whether unsupported questions are refused.",
+      "limitations": ["does not measure false refusals"],
+      "anti_gaming_checks": [],
+      "used_as_acceptance_pass": true,
+      "paired_checks": []
+    },
+    {
+      "id": "MET-002",
+      "metric": "answer_relevance_accuracy",
+      "purpose": "Counts any non-refusal as relevant.",
+      "limitations": [],
+      "anti_gaming_checks": [],
+      "used_as_acceptance_pass": true,
+      "unlabeled_rows_count": 3,
+      "partial_relevance_accepted_rows": 2
+    },
+    {
+      "id": "MET-003",
+      "metric": "section_support_coverage",
+      "purpose": "Treats any section citation as grounding.",
+      "limitations": [],
+      "anti_gaming_checks": [],
+      "used_as_acceptance_pass": true,
+      "used_as_grounding": true
+    },
+    {
+      "id": "MET-004",
+      "metric": "claim_grounding_coverage",
+      "status": "unavailable",
+      "used_as_acceptance_pass": true,
+      "claim_to_citation_labels_present": false,
+      "citation_line_ranges_present": false
+    },
+    {
+      "id": "MET-005",
+      "metric": "architecture_layer_detection",
+      "purpose": "Uses path prefixes as architecture.",
+      "limitations": [],
+      "anti_gaming_checks": [],
+      "used_as_acceptance_pass": true
+    }
+  ],
+  "benchmark_metadata": {
+    "rows": [
+      {"id": "RF-001", "labels_complete": true},
+      {"id": "RF-002", "labels_complete": true},
+      {"id": "FA-001", "labels_complete": true},
+      {"id": "FA-002", "labels_complete": true},
+      {"id": "FA-004", "labels_complete": true},
+      {"id": "AR-001", "labels_complete": false},
+      {"id": "AR-002", "labels_complete": false},
+      {"id": "ARCH-NEG-001", "labels_complete": true},
+      {"id": "MET-003", "labels_complete": true},
+      {"id": "MET-004", "labels_complete": true}
+    ]
+  }
+}
