@@ -2,6 +2,11 @@
 
 Knowledge Forge evaluates retrieval and generation separately.
 
+For acceptance gates and the current Phase 17 conformance proof, see:
+
+- [Acceptance Methodology](evaluations/acceptance-methodology.md)
+- [Phase 17 Validation Proof](proof/phase17-validation.md)
+
 ## Retrieval Metrics
 
 - Hit Rate: at least one expected source appears in retrieved results

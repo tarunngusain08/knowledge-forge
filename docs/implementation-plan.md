@@ -1,7 +1,11 @@
 # Implementation Plan
 
-Knowledge Forge has completed the document-RAG foundation through `m11` and is
-now extending into repository intelligence with `tgusain/` feature branches.
+Knowledge Forge has completed the document-RAG foundation, repository
+intelligence MVP, product experience, planning/impact workflows, and Phase 17
+Deep-Dive Report conformance.
+
+For the current roadmap boundary, use [Roadmap](roadmap.md). For the accepted
+Phase 17 proof, use [Phase 17 Validation Proof](proof/phase17-validation.md).
 
 ## Completed Foundation
 
@@ -224,3 +228,40 @@ Tradeoffs:
   metadata exists; otherwise the response explicitly marks missing context.
 - Benchmark thresholds from Phase 13 still decide whether richer symbol/graph
   retrieval should become default later.
+
+## Phase 17: Deep-Dive Report Conformance
+
+Branch history:
+
+- `tgusain/m17-repository-deep-dive-report`
+- `tgusain/m17-report-quality-hardening`
+- `tgusain/m17-validation-framework`
+- `tgusain/m17-acceptance-framework-hardening`
+- `tgusain/m17-product-conformance`
+- `tgusain/m17-product-conformance-r2`
+
+Accepted result:
+
+```text
+6/6 acceptance gates pass
+0 evaluator issues
+```
+
+Implemented scope:
+
+- On-demand repository Deep-Dive Reports with JSON and Markdown export.
+- Shared evidence pass before targeted follow-up retrieval.
+- Evidence quality and missing-context sections.
+- Source-code-backed architecture evidence.
+- Claim grounding mappings.
+- Hardened acceptance gates for refusal, relevance, architecture evidence,
+  metric integrity, label completeness, and adversarial behavior.
+- Product conformance fixes for repository-registration, report-generation, and
+  deep-dive report relevance rows.
+
+Tradeoffs:
+
+- Raw audit folders remain local evidence and are not committed.
+- Phase 18 benchmark proof has not started in this branch.
+- Phase 19 static code intelligence remains a future candidate and must be
+  justified by Phase 18 measurements.
