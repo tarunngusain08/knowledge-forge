@@ -1,32 +1,47 @@
 # Repository Benchmarks
 
-This directory stores repository-intelligence benchmark labels for Phase 13.
+This directory stores repository-intelligence benchmark labels and proof
+artifacts.
 
-The first controlled corpus is `synthetic_enterprise_monolith.jsonl`. It points
-to `eval-runner/fixtures/synthetic-enterprise-monolith`, a deliberately small
-repo with auth, billing, notifications, interface boundaries, API wiring, and
-tests.
+The controlled corpus is `synthetic_enterprise_monolith.jsonl`. It points to
+`eval-runner/fixtures/synthetic-enterprise-monolith`, a deliberately small repo
+with auth, billing, notifications, orders, audit logging, API wiring, and tests.
 
-Each JSONL row can include:
+Phase 18 freezes this corpus at 30 curated rows before result generation.
 
+## Row Schema
+
+Each JSONL row includes:
+
+- `id`
+- `category`
 - `question`
 - `repository_fixture`
 - `branch_name`
 - `expected_files`
 - `expected_symbols`
-- `expected_line_ranges`
 - `expected_answer_facts`
+- `required_evidence_groups`
 - `should_refuse`
+
+`expected_line_ranges` are optional and are not required for Phase 18.
+
+## Offline Scoring
 
 Run offline scoring against saved result rows:
 
 ```bash
 python3 eval-runner/repo_benchmark_runner.py \
-  --input eval-runner/benchmarks/synthetic_enterprise_monolith.jsonl \
-  --output /tmp/repo-benchmark.json
+  --input eval-runner/benchmarks/results/phase18/knowledge_forge_candidate.jsonl \
+  --baseline keyword=eval-runner/benchmarks/results/phase18/keyword_baseline.jsonl \
+  --baseline retrieval_only=eval-runner/benchmarks/results/phase18/retrieval_only_baseline.jsonl \
+  --output /tmp/phase18-benchmark.json \
+  --report-output /tmp/phase18-benchmark.md
 ```
 
-Run against a live API:
+## Live API Mode
+
+Run against a live API when a repository has been indexed:
 
 ```bash
 python3 eval-runner/repo_benchmark_runner.py \
@@ -39,9 +54,28 @@ python3 eval-runner/repo_benchmark_runner.py \
   --reranker
 ```
 
-Decision gates:
+## Phase 18 Artifacts
 
-- Keep symbol retrieval only if expected file/symbol coverage improves by at least 10%.
-- Enable graph retrieval only if Recall@K or file coverage improves by at least 10% without increasing latency by more than 25%.
-- Keep reranking only if MRR improves by at least 5% or faithfulness improves meaningfully without unacceptable cost.
+Committed Phase 18 artifacts live under:
+
+```text
+eval-runner/benchmarks/results/phase18/
+```
+
+Required files:
+
+- `keyword_baseline.jsonl`
+- `retrieval_only_baseline.jsonl`
+- `knowledge_forge_candidate.jsonl`
+- `phase18-benchmark.json`
+- `phase18-benchmark.md`
+
+## Decision Gates
+
+- Keep symbol retrieval only if expected file/symbol coverage improves by at
+  least 10%.
+- Enable graph retrieval only if Recall@K or file coverage improves by at least
+  10% without increasing latency by more than 25%.
+- Keep reranking only if MRR improves by at least 5% or faithfulness improves
+  meaningfully without unacceptable cost.
 - Disable or delete retrieval components that do not earn their place.
