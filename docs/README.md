@@ -42,6 +42,8 @@ claim.
   gates and how CI validates them.
 - [Phase 17 Validation Proof](proof/phase17-validation.md): only detailed
   Phase 17 proof narrative.
+- [Phase 17 Retrospective](postmortems/phase17-retrospective.md): reusable
+  operating lessons for Phase 18.
 - [Deep-Dive Report Case Study](case-studies/deep-dive-report.md): product
   workflow example.
 
