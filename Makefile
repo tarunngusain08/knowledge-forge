@@ -1,7 +1,7 @@
 GO ?= go
 COMPOSE ?= docker compose
 
-.PHONY: test vet tidy run-api run-worker migrate-up compose-up compose-down sqlc goose-status
+.PHONY: test vet tidy run-api run-worker migrate-up compose-up compose-down sqlc goose-status validate-acceptance
 
 test:
 	$(GO) test ./...
@@ -32,3 +32,10 @@ sqlc:
 
 goose-status:
 	$(GO) run github.com/pressly/goose/v3/cmd/goose@v3.24.3 -dir migrations postgres "$$DATABASE_URL" status
+
+validate-acceptance:
+	python3 eval-runner/acceptance/validation_runner.py \
+		--fixtures eval-runner/acceptance/fixtures/acceptance-suite.json \
+		--candidate eval-runner/acceptance/candidates/passing-candidate.json \
+		--output eval-runner/acceptance/reports
+	python3 -m unittest discover eval-runner/acceptance -p 'test_*.py'

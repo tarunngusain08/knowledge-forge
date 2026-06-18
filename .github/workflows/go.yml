@@ -26,3 +26,11 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Acceptance validation
+      run: |
+        python3 eval-runner/acceptance/validation_runner.py \
+          --fixtures eval-runner/acceptance/fixtures/acceptance-suite.json \
+          --candidate eval-runner/acceptance/candidates/passing-candidate.json \
+          --output /tmp/knowledge-forge-acceptance-reports
+        python3 -m unittest discover eval-runner/acceptance -p 'test_*.py'
