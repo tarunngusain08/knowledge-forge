@@ -112,12 +112,57 @@ The result applies only to infrastructure, platform, and developer-tooling
 repositories represented by the benchmark. It must not be generalized to all
 repository types.
 
+### Phase 18.6: Security Remediation And Tenant Isolation
+
+Status:
+
+```text
+Complete
+Merged
+```
+
+Goal:
+
+Validate and remediate concrete tenant-isolation and deployment trust-boundary
+findings before Phase 19.
+
+Validated outputs:
+
+- cross-user dense retrieval isolation
+- cross-user PostgreSQL FTS isolation
+- retrieval trace owner authorization
+- deleted-document retrieval revocation test
+- repository input guards for local paths and unsafe remotes
+- internal worker token enforcement
+- security findings disposition table
+- benchmark regression guardrail
+
+Proof:
+
+- [Phase 18.6 Security Remediation](proof/phase18-6-security-remediation.md)
+
+Result:
+
+```text
+Security remediation complete
+P0 tenant-isolation findings fixed
+No security blocker report generated
+```
+
 ## Validated Next
 
-The next validated investment is broader corpus expansion, especially outside
-infrastructure/tooling repositories. Repository Structure Indexing and Static
-Code Intelligence remain investigation candidates. Graph Retrieval remains
-rejected until graph-specific failures dominate measured results.
+The next validated step is a release-readiness review before Phase 19 planning.
+Phase 19 may begin only after release readiness is not blocked and human review
+accepts the result.
+
+After release readiness, the benchmark-backed roadmap options are:
+
+- broader corpus expansion outside infrastructure/tooling repositories
+- Repository Structure Indexing investigation
+- Static Code Intelligence investigation
+
+Graph Retrieval remains rejected until graph-specific failures dominate measured
+results.
 
 ## Future Candidate
 
