@@ -103,6 +103,10 @@ committed docs and benchmark artifacts:
 | Architecture overview | [architecture-overview.png](images/architecture/architecture-overview.png) | `README.md`, `docs/architecture.md`, Phase 18.6/18.8 security proof. |
 | Benchmark summary | [benchmark-summary.png](images/benchmarks/benchmark-summary.png) | Phase 18 and Phase 18.5 committed benchmark JSON. |
 | Benchmark comparison | [benchmark-comparison.png](images/benchmarks/benchmark-comparison.png) | Phase 18 committed benchmark JSON. |
+| Phase 18.5 corpus outcomes | [phase18-5-corpus-outcomes.png](images/benchmarks/phase18-5-corpus-outcomes.png) | Phase 18.5 committed benchmark JSON. |
+| Phase 18.5 category outcomes | [phase18-5-category-outcomes.png](images/benchmarks/phase18-5-category-outcomes.png) | Phase 18.5 committed benchmark JSON. |
+| Phase 18.5 stability and failure clusters | [phase18-5-stability-failures.png](images/benchmarks/phase18-5-stability-failures.png) | Phase 18.5 committed benchmark JSON. |
+| Saved query result examples | [query-results-gallery.png](images/query-results/query-results-gallery.png) | Phase 18.5 Knowledge Forge candidate JSONL. |
 | Security posture summary | [security-posture-summary.png](images/security/security-posture-summary.png) | Phase 18.6 and Phase 18.8 proof docs. |
 
 UI screenshots are intentionally not committed until a real runnable demo

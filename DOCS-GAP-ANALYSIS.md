@@ -36,6 +36,8 @@ Out of scope:
 | README first impression | The README was accurate and modern, but the evidence trail was mostly text-heavy. | Added a maturity snapshot, clearer value proposition, target users, non-goals, and visual proof summaries. |
 | Architecture overview | Architecture existed in prose and ASCII flow, but there was no repository-friendly visual summary. | Added `docs/images/architecture/architecture-overview.png` based on existing architecture and security docs. |
 | Benchmark evidence | Phase 18 and 18.5 results were present in proof docs and JSON, but easy to miss on first read. | Added `benchmark-summary.png` and `benchmark-comparison.png` generated from committed benchmark JSON. |
+| Benchmark breakdowns | Phase 18.5 corpus/category/stability details were available in JSON and reports, but not visible from the README. | Added corpus outcome, category outcome, stability, and failure-cluster visuals generated from committed Phase 18.5 JSON. |
+| Query result examples | Saved benchmark candidate rows existed, but new readers could not quickly see what a representative query result contained. | Added query-result cards rendered from committed Phase 18.5 Knowledge Forge candidate JSONL. |
 | Security posture | Phase 18.6 and 18.8 proof docs were strong but buried for a new reader. | Added `security-posture-summary.png` and linked it from the README security section. |
 | Evidence navigation | The README listed proof docs, but the milestone sequence required reading several sections. | Added an Evidence Trail table mapping each milestone to proof and outcome. |
 | Roadmap clarity | Roadmap docs were already strong; README needed a faster summary of selected/candidate/rejected work. | Kept Larger Corpus Expansion as selected next direction and repeated not-started boundaries. |
@@ -59,7 +61,11 @@ documentation risks are:
 
 ## Screenshot Gaps
 
-Real UI screenshots were not committed in this refresh.
+Saved benchmark query-result screenshots were committed in
+`docs/images/query-results/`. They are rendered from committed Phase 18.5
+candidate JSONL and are not fabricated UI screens.
+
+Real product UI screenshots were not committed in this refresh.
 
 Reason:
 

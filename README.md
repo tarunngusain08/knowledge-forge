@@ -316,6 +316,12 @@ yet prove performance across all repository types.
 
 ![Phase 18 benchmark comparison](docs/images/benchmarks/benchmark-comparison.png)
 
+![Phase 18.5 corpus outcomes](docs/images/benchmarks/phase18-5-corpus-outcomes.png)
+
+![Phase 18.5 category outcomes](docs/images/benchmarks/phase18-5-category-outcomes.png)
+
+![Phase 18.5 stability and failure clusters](docs/images/benchmarks/phase18-5-stability-failures.png)
+
 Phase 18 answered whether Knowledge Forge retrieves and grounds repository
 evidence better than simple baselines on the synthetic enterprise monolith. The
 answer was `Partially Proven`: Knowledge Forge materially improved
@@ -342,6 +348,26 @@ The benchmark source of truth remains the committed JSON/Markdown under
 `eval-runner/benchmarks/results/phase18/` and
 `eval-runner/benchmarks/results/phase18_5/`. The images in this README are
 rendered summaries of those committed results, not new benchmark outputs.
+
+### Saved Query Result Examples
+
+The following screenshots are rendered from committed Phase 18.5 Knowledge
+Forge candidate rows. They are not fabricated UI screens and they do not change
+benchmark data. They show the saved query, whether Knowledge Forge answered or
+refused, the retrieved files, symbols, evidence groups, matched facts, and
+support counts.
+
+![Saved query result examples](docs/images/query-results/query-results-gallery.png)
+
+Representative individual query cards:
+
+| Query Type | Screenshot | Source Row |
+| --- | --- | --- |
+| Authentication architecture | [query-authentication.png](docs/images/query-results/query-authentication.png) | `arch-impl-001` |
+| Helm CLI-to-action architecture | [query-helm-install.png](docs/images/query-results/query-helm-install.png) | `helm-arch-001` |
+| OTel impact reasoning | [query-otel-impact.png](docs/images/query-results/query-otel-impact.png) | `otel-dep-006` |
+| Prompt-injection refusal | [query-refusal-secrets.png](docs/images/query-results/query-refusal-secrets.png) | `helm-unsup-003` |
+| Deep-Dive grounding | [query-deep-dive-order.png](docs/images/query-results/query-deep-dive-order.png) | `deep-ground-004` |
 
 ### Evidence Trail
 
