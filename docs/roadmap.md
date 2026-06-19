@@ -149,15 +149,105 @@ P0 tenant-isolation findings fixed
 No security blocker report generated
 ```
 
+### Phase 18.7: Release Readiness Review
+
+Status:
+
+```text
+Complete
+READY
+Merged
+```
+
+Goal:
+
+Confirm that a new engineer can understand, run, evaluate, deploy, and trust
+Knowledge Forge without reading the full project history.
+
+Proof:
+
+- [Phase 18.7 Release Readiness](proof/phase18-7-release-readiness.md)
+
+Result:
+
+```text
+READY
+No release-readiness blocker found
+```
+
+### Phase 18.8: Security Hardening
+
+Status:
+
+```text
+Complete
+Merged
+```
+
+Goal:
+
+Validate and close remaining concrete medium-severity security issues affecting
+tenant boundaries, refusal leakage, document lifecycle integrity, and upload
+availability.
+
+Proof:
+
+- [Phase 18.8 Security Hardening](proof/phase18-8-security-hardening.md)
+
+Result:
+
+```text
+Security hardening complete
+Five findings reproduced, fixed, and regression-tested
+Merged as 2c39902
+```
+
 ## Validated Next
 
-The next validated step is a release-readiness review before Phase 19 planning.
-Phase 19 may begin only after release readiness is not blocked and human review
-accepts the result.
+### Phase 19: Larger Corpus Expansion
 
-After release readiness, the benchmark-backed roadmap options are:
+Status:
 
-- broader corpus expansion outside infrastructure/tooling repositories
+```text
+Selected Next Direction
+Not started
+Human review required before implementation
+```
+
+Decision:
+
+```text
+Proceed with Larger Corpus Expansion
+Decision Confidence: High
+```
+
+Proof:
+
+- [Phase 19 Planning Review](proof/phase19-planning-review.md)
+
+Reason:
+
+Phase 18 established measurable repository-intelligence advantage. Phase 18.5
+showed the advantage was generalized and moderately stable across the synthetic
+monolith, Helm, and OpenTelemetry Collector. The largest remaining uncertainty
+is external validity across additional repository families.
+
+Larger Corpus Expansion is the lowest-cost way to reduce that uncertainty before
+introducing new retrieval architecture.
+
+Exit criteria:
+
+- at least three additional repository families benchmarked
+- cross-corpus stability recomputed
+- new recommendation made between Maintain Current Architecture, Repository
+  Structure Indexing, and Static Code Intelligence
+- no retrieval architecture changes during corpus expansion
+
+## Investigation Candidates
+
+These items are not selected implementation work. They remain candidates only if
+future benchmark evidence justifies them.
+
 - Repository Structure Indexing investigation
 - Static Code Intelligence investigation
 
@@ -166,7 +256,7 @@ results.
 
 ## Future Candidate
 
-### Phase 19: Static Code Intelligence v1
+### Repository Structure Indexing
 
 Status:
 
@@ -175,8 +265,26 @@ Candidate
 Not started
 ```
 
-Allowed only if Phase 18 identifies a measured weakness that static
-intelligence can address.
+Allowed only if future benchmark failures cluster around architecture,
+repository topology, or dependency navigation.
+
+Candidate scope:
+
+- directory/package structure extraction
+- entry point and module relationship summaries
+- lightweight repository topology evidence
+
+### Static Code Intelligence v1
+
+Status:
+
+```text
+Candidate
+Not started
+```
+
+Allowed only if benchmark evidence shows symbol/reference failures dominate, or
+retrieval recall is high while reasoning accuracy remains low.
 
 Candidate scope:
 
