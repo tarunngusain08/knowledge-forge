@@ -86,6 +86,8 @@ func (s *Service) ProcessJob(ctx context.Context, jobID uuid.UUID) error {
 		Status:       documents.StatusIndexed,
 		ErrorMessage: pgtype.Text{Valid: false},
 	}); err != nil {
+		_ = s.store.DeleteChunksByDocument(ctx, job.DocumentID)
+		_ = s.vector.DeleteDocument(ctx, job.DocumentID)
 		return fmt.Errorf("mark document indexed: %w", err)
 	}
 	if _, err := s.store.MarkIndexingJobSucceeded(ctx, job.ID); err != nil {
@@ -136,6 +138,9 @@ func (s *Service) processDocument(ctx context.Context, documentID uuid.UUID) err
 	}
 	if len(embeddings) != len(chunks) {
 		return fmt.Errorf("embedding count mismatch: got %d want %d", len(embeddings), len(chunks))
+	}
+	if _, err := s.store.GetDocumentBytes(ctx, document.ID); err != nil {
+		return fmt.Errorf("document no longer indexable: %w", err)
 	}
 
 	if err := s.store.DeleteChunksByDocument(ctx, document.ID); err != nil {

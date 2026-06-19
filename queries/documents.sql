@@ -36,7 +36,7 @@ WHERE id = $1 AND status <> 'deleted';
 -- name: MarkDocumentStatus :one
 UPDATE documents
 SET status = $2, error_message = $3, updated_at = now()
-WHERE id = $1
+WHERE id = $1 AND status <> 'deleted'
 RETURNING id, owner_user_id, filename, content_type, size_bytes, sha256, status, error_message, created_at, updated_at;
 
 -- name: GetChunkByVectorID :one

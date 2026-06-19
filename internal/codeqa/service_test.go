@@ -46,6 +46,21 @@ func TestAskRefusesUnsupportedQuestionBeforeGeneration(t *testing.T) {
 	if llm.generated != 0 {
 		t.Fatalf("generation should be skipped for unsupported evidence")
 	}
+	if len(response.Retrieval.RerankedHits) != 0 || len(response.Retrieval.DenseHits) != 0 {
+		t.Fatalf("refused response exposed retrieval hits: %#v", response.Retrieval)
+	}
+	if len(response.Provenance.RetrievedChunkIDs) != 0 || response.Provenance.ContextTokenCount != 0 {
+		t.Fatalf("refused response provenance exposed retrieval context: %#v", response.Provenance)
+	}
+	if store.trace.PromptPreview != "" {
+		t.Fatalf("refused trace exposed prompt preview: %q", store.trace.PromptPreview)
+	}
+	if traceHits, ok := store.trace.RerankedHits.([]rag.RetrievalHit); ok && len(traceHits) != 0 {
+		t.Fatalf("refused trace exposed reranked hits: %#v", traceHits)
+	}
+	if len(store.trace.RetrievedChunkIDs) != 0 || store.trace.ContextTokenCount != 0 {
+		t.Fatalf("refused trace exposed retrieval context: %#v", store.trace)
+	}
 	gate := supportGateFromTrace(t, store.trace)
 	if gate.Answerable {
 		t.Fatalf("support gate = %#v", gate)

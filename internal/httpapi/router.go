@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 	"github.com/tarunngusain08/knowledge-forge/internal/chat"
+	"github.com/tarunngusain08/knowledge-forge/internal/codeintel"
 	"github.com/tarunngusain08/knowledge-forge/internal/codeqa"
 	"github.com/tarunngusain08/knowledge-forge/internal/config"
 	"github.com/tarunngusain08/knowledge-forge/internal/documents"
@@ -46,6 +47,13 @@ type Dependencies struct {
 type repositoryTraceStore interface {
 	GetRetrievalTraceForUser(ctx context.Context, userID, id uuid.UUID) (repositories.RetrievalTrace, error)
 	CreateFeedback(ctx context.Context, input repositories.CreateFeedbackInput) (repositories.Feedback, error)
+}
+
+type repositoryService interface {
+	Create(ctx context.Context, input repositories.CreateInput) (codeintel.Repository, error)
+	Get(ctx context.Context, ownerUserID, repositoryID uuid.UUID) (codeintel.Repository, error)
+	CreateIngestion(ctx context.Context, input repositories.CreateIngestionInput) (codeintel.IngestionJob, error)
+	GetIngestionForUser(ctx context.Context, userID, jobID uuid.UUID) (codeintel.IngestionJob, error)
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -135,7 +143,7 @@ type Server struct {
 	chat                *chat.Service
 	retriever           rag.Retriever
 	evaluation          *evaluation.Service
-	repositories        *repositories.Service
+	repositories        repositoryService
 	repoStore           repositoryTraceStore
 	repoIndexer         *indexing.RepositoryIndexer
 	codeQA              *codeqa.Service

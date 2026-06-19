@@ -168,6 +168,18 @@ WHERE id = $1
 	return scanIngestionJob(row)
 }
 
+func (s *Store) GetIngestionJobForUser(ctx context.Context, id, ownerUserID uuid.UUID) (codeintel.IngestionJob, error) {
+	row := s.pool.QueryRow(ctx, `
+SELECT j.id, j.repository_id, j.branch_name, j.commit_sha, j.status, j.attempts, j.max_attempts, j.error_message, j.locked_by, j.requested_by, j.snapshot_id, j.created_at, j.updated_at
+FROM repository_ingestion_jobs j
+JOIN repositories r ON r.id = j.repository_id
+WHERE j.id = $1
+  AND r.owner_user_id = $2
+  AND r.status <> 'deleted'
+`, id, ownerUserID)
+	return scanIngestionJob(row)
+}
+
 func (s *Store) LeaseIngestionJobs(ctx context.Context, limit int32, workerName string) ([]codeintel.IngestionJob, error) {
 	if limit <= 0 {
 		limit = 1
