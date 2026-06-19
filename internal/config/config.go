@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,6 +29,9 @@ type Config struct {
 	PineconeNamespace     string
 	WorkerName            string
 	WorkerBatchSize       int64
+	InternalWorkerToken   string
+	AllowLocalRepoPaths   bool
+	AllowedGitRemoteHosts []string
 	ShutdownTimeout       time.Duration
 	MaxUploadBytes        int64
 }
@@ -54,6 +58,9 @@ func Load() (Config, error) {
 		PineconeNamespace:     getenv("PINECONE_NAMESPACE", "default"),
 		WorkerName:            getenv("WORKER_NAME", "knowledge-forge-worker"),
 		WorkerBatchSize:       getInt64("WORKER_BATCH_SIZE", 2),
+		InternalWorkerToken:   os.Getenv("INTERNAL_WORKER_TOKEN"),
+		AllowLocalRepoPaths:   getBool("ALLOW_LOCAL_REPOSITORY_PATHS", false),
+		AllowedGitRemoteHosts: getCSV("ALLOWED_GIT_REMOTE_HOSTS"),
 		ShutdownTimeout:       getDuration("SHUTDOWN_TIMEOUT", 10*time.Second),
 		MaxUploadBytes:        getInt64("MAX_UPLOAD_BYTES", 20*1024*1024),
 	}
@@ -93,4 +100,32 @@ func getInt64(key string, fallback int64) int64 {
 		return fallback
 	}
 	return parsed
+}
+
+func getBool(key string, fallback bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func getCSV(key string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }

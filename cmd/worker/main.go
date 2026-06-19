@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tarunngusain08/knowledge-forge/internal/codeintel"
 	"github.com/tarunngusain08/knowledge-forge/internal/config"
 	"github.com/tarunngusain08/knowledge-forge/internal/database"
 	"github.com/tarunngusain08/knowledge-forge/internal/db"
@@ -52,9 +53,10 @@ func main() {
 		cfg.WorkerName,
 	)
 	repoStore := repositories.NewStore(pool)
+	repoPolicy := codeintel.NewRepositoryPolicy(cfg.AllowLocalRepoPaths, cfg.AllowedGitRemoteHosts)
 	repoIndexer := indexing.NewRepositoryIndexer(
 		repoStore,
-		gitprovider.Provider{},
+		gitprovider.Provider{Policy: repoPolicy},
 		indexingProviders.Embedder,
 		indexingProviders.Vector,
 		logger,

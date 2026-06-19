@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 	"github.com/tarunngusain08/knowledge-forge/internal/chat"
 	"github.com/tarunngusain08/knowledge-forge/internal/codeqa"
@@ -41,19 +43,25 @@ type Dependencies struct {
 	CodeQA            *codeqa.Service
 }
 
+type repositoryTraceStore interface {
+	GetRetrievalTraceForUser(ctx context.Context, userID, id uuid.UUID) (repositories.RetrievalTrace, error)
+	CreateFeedback(ctx context.Context, input repositories.CreateFeedbackInput) (repositories.Feedback, error)
+}
+
 func NewRouter(deps Dependencies) http.Handler {
 	server := &Server{
-		auth:           deps.Auth,
-		documents:      deps.Documents,
-		worker:         deps.Worker,
-		chat:           deps.Chat,
-		retriever:      deps.Retriever,
-		evaluation:     deps.Evaluation,
-		repositories:   deps.Repositories,
-		repoStore:      deps.RepositoryStore,
-		repoIndexer:    deps.RepositoryIndexer,
-		codeQA:         deps.CodeQA,
-		maxUploadBytes: deps.Config.MaxUploadBytes,
+		auth:                deps.Auth,
+		documents:           deps.Documents,
+		worker:              deps.Worker,
+		chat:                deps.Chat,
+		retriever:           deps.Retriever,
+		evaluation:          deps.Evaluation,
+		repositories:        deps.Repositories,
+		repoStore:           deps.RepositoryStore,
+		repoIndexer:         deps.RepositoryIndexer,
+		codeQA:              deps.CodeQA,
+		maxUploadBytes:      deps.Config.MaxUploadBytes,
+		internalWorkerToken: deps.Config.InternalWorkerToken,
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -111,27 +119,28 @@ func NewRouter(deps Dependencies) http.Handler {
 		})
 	}
 	if deps.Worker != nil {
-		r.Post("/internal/jobs/{job_id}/process", server.handleProcessJob)
+		r.With(server.requireInternalWorkerToken).Post("/internal/jobs/{job_id}/process", server.handleProcessJob)
 	}
 	if deps.RepositoryIndexer != nil {
-		r.Post("/internal/repository-jobs/{job_id}/process", server.handleProcessRepositoryJob)
+		r.With(server.requireInternalWorkerToken).Post("/internal/repository-jobs/{job_id}/process", server.handleProcessRepositoryJob)
 	}
 
 	return r
 }
 
 type Server struct {
-	auth           *auth.Service
-	documents      *documents.Service
-	worker         *worker.Service
-	chat           *chat.Service
-	retriever      rag.Retriever
-	evaluation     *evaluation.Service
-	repositories   *repositories.Service
-	repoStore      *repositories.Store
-	repoIndexer    *indexing.RepositoryIndexer
-	codeQA         *codeqa.Service
-	maxUploadBytes int64
+	auth                *auth.Service
+	documents           *documents.Service
+	worker              *worker.Service
+	chat                *chat.Service
+	retriever           rag.Retriever
+	evaluation          *evaluation.Service
+	repositories        *repositories.Service
+	repoStore           repositoryTraceStore
+	repoIndexer         *indexing.RepositoryIndexer
+	codeQA              *codeqa.Service
+	maxUploadBytes      int64
+	internalWorkerToken string
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

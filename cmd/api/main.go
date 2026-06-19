@@ -12,6 +12,7 @@ import (
 
 	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 	"github.com/tarunngusain08/knowledge-forge/internal/chat"
+	"github.com/tarunngusain08/knowledge-forge/internal/codeintel"
 	"github.com/tarunngusain08/knowledge-forge/internal/codeqa"
 	"github.com/tarunngusain08/knowledge-forge/internal/config"
 	"github.com/tarunngusain08/knowledge-forge/internal/database"
@@ -93,10 +94,11 @@ func main() {
 	chatService := chat.NewService(db.New(pool), queryProviders.LLM, retriever)
 	evalService := evaluation.NewService(db.New(pool), retriever)
 	repoStore := repositories.NewStore(pool)
-	repoService := repositories.NewService(repoStore)
+	repoPolicy := codeintel.NewRepositoryPolicy(cfg.AllowLocalRepoPaths, cfg.AllowedGitRemoteHosts)
+	repoService := repositories.NewServiceWithPolicy(repoStore, repoPolicy)
 	repoIndexer := indexing.NewRepositoryIndexer(
 		repoStore,
-		gitprovider.Provider{},
+		gitprovider.Provider{Policy: repoPolicy},
 		indexingProviders.Embedder,
 		indexingProviders.Vector,
 		logger,

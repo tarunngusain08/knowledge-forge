@@ -18,6 +18,7 @@ import (
 type Provider struct {
 	CloneRoot    string
 	CloneTimeout time.Duration
+	Policy       codeintel.RepositoryPolicy
 }
 
 func (p Provider) ResolveWorktree(ctx context.Context, repo codeintel.Repository, branchName string, commitSHA string) (codeintel.Worktree, error) {
@@ -28,6 +29,9 @@ func (p Provider) ResolveWorktree(ctx context.Context, repo codeintel.Repository
 		branchName = "main"
 	}
 	if repo.LocalPath != "" {
+		if !p.Policy.AllowLocalPaths {
+			return codeintel.Worktree{}, fmt.Errorf("local repository paths are disabled")
+		}
 		abs, err := filepath.Abs(repo.LocalPath)
 		if err != nil {
 			return codeintel.Worktree{}, fmt.Errorf("resolve local repository path: %w", err)
@@ -44,6 +48,9 @@ func (p Provider) ResolveWorktree(ctx context.Context, repo codeintel.Repository
 	}
 	if repo.RemoteURL == "" {
 		return codeintel.Worktree{}, fmt.Errorf("repository %s has no local path or remote url", repo.ID)
+	}
+	if err := p.Policy.ValidateRemoteURL(repo.RemoteURL); err != nil {
+		return codeintel.Worktree{}, err
 	}
 	root := p.CloneRoot
 	if root == "" {
