@@ -272,12 +272,17 @@ func (s *Server) handleGenerateDeepDiveReport(w http.ResponseWriter, r *http.Req
 }
 
 func (s *Server) handleGetRepositoryRetrievalTrace(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
 	traceID, err := uuid.Parse(chi.URLParam(r, "trace_id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid trace id")
 		return
 	}
-	trace, err := s.repoStore.GetRetrievalTrace(r.Context(), traceID)
+	trace, err := s.repoStore.GetRetrievalTraceForUser(r.Context(), user.ID, traceID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "retrieval trace not found")
 		return

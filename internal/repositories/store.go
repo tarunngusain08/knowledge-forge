@@ -392,22 +392,22 @@ INSERT INTO repo_retrieval_traces (
 	return id, err
 }
 
-func (s *Store) GetRetrievalTrace(ctx context.Context, id uuid.UUID) (RetrievalTrace, error) {
+func (s *Store) GetRetrievalTraceForUser(ctx context.Context, userID, id uuid.UUID) (RetrievalTrace, error) {
 	row := s.pool.QueryRow(ctx, `
 SELECT id, user_id, repository_id, snapshot_id, branch_name, original_query, rewritten_query, top_k,
        dense_hits, lexical_hits, symbol_hits, graph_hits, fused_hits, reranked_hits,
        prompt_preview, latency_ms, query_category, retrieval_path, retrieval_config, retrieved_chunk_ids,
        stage_contributions, context_token_count, prompt_version, generation_model, estimated_cost_usd, created_at
 FROM repo_retrieval_traces
-WHERE id = $1
-`, id)
+WHERE id = $1 AND user_id = $2
+`, id, nullableUUID(userID))
 	var trace RetrievalTrace
-	var userID pgtype.UUID
+	var traceUserID pgtype.UUID
 	var snapshotID pgtype.UUID
-	if err := row.Scan(&trace.ID, &userID, &trace.RepositoryID, &snapshotID, &trace.BranchName, &trace.OriginalQuery, &trace.RewrittenQuery, &trace.TopK, &trace.DenseHits, &trace.LexicalHits, &trace.SymbolHits, &trace.GraphHits, &trace.FusedHits, &trace.RerankedHits, &trace.PromptPreview, &trace.LatencyMS, &trace.QueryCategory, &trace.RetrievalPath, &trace.RetrievalConfig, &trace.RetrievedChunkIDs, &trace.StageContributions, &trace.ContextTokenCount, &trace.PromptVersion, &trace.GenerationModel, &trace.EstimatedCostUSD, &trace.CreatedAt); err != nil {
+	if err := row.Scan(&trace.ID, &traceUserID, &trace.RepositoryID, &snapshotID, &trace.BranchName, &trace.OriginalQuery, &trace.RewrittenQuery, &trace.TopK, &trace.DenseHits, &trace.LexicalHits, &trace.SymbolHits, &trace.GraphHits, &trace.FusedHits, &trace.RerankedHits, &trace.PromptPreview, &trace.LatencyMS, &trace.QueryCategory, &trace.RetrievalPath, &trace.RetrievalConfig, &trace.RetrievedChunkIDs, &trace.StageContributions, &trace.ContextTokenCount, &trace.PromptVersion, &trace.GenerationModel, &trace.EstimatedCostUSD, &trace.CreatedAt); err != nil {
 		return RetrievalTrace{}, err
 	}
-	trace.UserID = uuidPtr(userID)
+	trace.UserID = uuidPtr(traceUserID)
 	trace.SnapshotID = uuidPtr(snapshotID)
 	return trace, nil
 }

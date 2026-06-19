@@ -56,6 +56,14 @@ func TestProcessJobIndexesDocument(t *testing.T) {
 	if len(vector.Records) != len(store.chunks) {
 		t.Fatalf("expected %d vector records, got %d", len(store.chunks), len(vector.Records))
 	}
+	for _, record := range vector.Records {
+		if record.Metadata["owner_user_id"] != store.document.OwnerUserID.String() {
+			t.Fatalf("missing owner metadata on vector: %#v", record.Metadata)
+		}
+		if record.Metadata["source_type"] != "document_chunk" {
+			t.Fatalf("missing document source metadata on vector: %#v", record.Metadata)
+		}
+	}
 }
 
 type fakeStore struct {

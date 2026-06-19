@@ -44,7 +44,10 @@ SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_cou
        d.filename
 FROM chunks c
 JOIN documents d ON d.id = c.document_id
-WHERE c.document_id = $1 AND c.chunk_index = $2;
+WHERE c.document_id = $1
+  AND c.chunk_index = $2
+  AND d.owner_user_id = $3
+  AND d.status = 'indexed';
 
 -- name: SearchChunksFTS :many
 SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_count, c.metadata, c.created_at,
@@ -53,9 +56,10 @@ SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_cou
 FROM chunks c
 JOIN documents d ON d.id = c.document_id
 WHERE d.status = 'indexed'
+  AND d.owner_user_id = $2
   AND c.search_vector @@ websearch_to_tsquery('english', $1)
 ORDER BY lexical_score DESC, c.created_at DESC
-LIMIT $2;
+LIMIT $3;
 
 -- name: MarkDocumentDeleted :exec
 UPDATE documents

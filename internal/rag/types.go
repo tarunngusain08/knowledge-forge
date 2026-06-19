@@ -171,7 +171,7 @@ type RerankerProvider interface {
 }
 
 type LexicalSearchProvider interface {
-	Search(ctx context.Context, query string, topK int) ([]RetrievalHit, error)
+	Search(ctx context.Context, userID uuid.UUID, query string, topK int) ([]RetrievalHit, error)
 }
 
 type ChunkingProvider interface {

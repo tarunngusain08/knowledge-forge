@@ -2,12 +2,14 @@ package retrieval
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -45,15 +47,18 @@ func (s *Service) Retrieve(ctx context.Context, req rag.RetrievalRequest) (rag.R
 	if err != nil {
 		return rag.RetrievalResult{}, fmt.Errorf("embed query: %w", err)
 	}
-	denseHits, err := s.vector.Search(ctx, embedding.Vector, candidateK, nil)
+	filter := map[string]any{
+		"owner_user_id": map[string]any{"$eq": req.UserID.String()},
+	}
+	denseHits, err := s.vector.Search(ctx, embedding.Vector, candidateK, filter)
 	if err != nil {
 		return rag.RetrievalResult{}, fmt.Errorf("dense search: %w", err)
 	}
-	hydratedDense, err := s.hydrateDense(ctx, denseHits)
+	hydratedDense, err := s.hydrateDense(ctx, req.UserID, denseHits)
 	if err != nil {
 		return rag.RetrievalResult{}, err
 	}
-	lexicalHits, err := s.lexical.Search(ctx, query, candidateK)
+	lexicalHits, err := s.lexical.Search(ctx, req.UserID, query, candidateK)
 	if err != nil {
 		return rag.RetrievalResult{}, fmt.Errorf("lexical search: %w", err)
 	}
@@ -111,7 +116,7 @@ func (s *Service) rerank(ctx context.Context, query string, hits []rag.Retrieval
 	return reranked, nil
 }
 
-func (s *Service) hydrateDense(ctx context.Context, hits []rag.RetrievalHit) ([]rag.RetrievalHit, error) {
+func (s *Service) hydrateDense(ctx context.Context, userID uuid.UUID, hits []rag.RetrievalHit) ([]rag.RetrievalHit, error) {
 	hydrated := make([]rag.RetrievalHit, 0, len(hits))
 	for _, hit := range hits {
 		documentID, chunkIndex, ok := parseVectorID(hit.Chunk.VectorID)
@@ -122,10 +127,14 @@ func (s *Service) hydrateDense(ctx context.Context, hits []rag.RetrievalHit) ([]
 			continue
 		}
 		row, err := s.store.GetChunkByVectorID(ctx, db.GetChunkByVectorIDParams{
-			DocumentID: documentID,
-			ChunkIndex: int32(chunkIndex),
+			DocumentID:  documentID,
+			ChunkIndex:  int32(chunkIndex),
+			OwnerUserID: userID,
 		})
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue
+			}
 			return nil, fmt.Errorf("hydrate dense hit %s: %w", hit.Chunk.VectorID, err)
 		}
 		hit.Chunk = chunkFromVectorRow(row)

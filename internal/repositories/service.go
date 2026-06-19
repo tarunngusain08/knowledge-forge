@@ -13,7 +13,8 @@ import (
 )
 
 type Service struct {
-	store *Store
+	store  *Store
+	policy codeintel.RepositoryPolicy
 }
 
 type CreateInput struct {
@@ -32,7 +33,11 @@ type CreateIngestionInput struct {
 }
 
 func NewService(store *Store) *Service {
-	return &Service{store: store}
+	return NewServiceWithPolicy(store, codeintel.NewRepositoryPolicy(false, nil))
+}
+
+func NewServiceWithPolicy(store *Store, policy codeintel.RepositoryPolicy) *Service {
+	return &Service{store: store, policy: policy}
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (codeintel.Repository, error) {
@@ -46,8 +51,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (codeintel.Repo
 	if name == "" {
 		return codeintel.Repository{}, errors.New("repository name is required")
 	}
-	if strings.TrimSpace(input.LocalPath) == "" && strings.TrimSpace(input.RemoteURL) == "" {
-		return codeintel.Repository{}, errors.New("local_path or remote_url is required")
+	if err := s.policy.ValidateRegistration(input.RemoteURL, input.LocalPath); err != nil {
+		return codeintel.Repository{}, err
 	}
 	if strings.TrimSpace(input.DefaultBranch) == "" {
 		input.DefaultBranch = "main"

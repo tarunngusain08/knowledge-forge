@@ -3,6 +3,8 @@ package retrieval
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/tarunngusain08/knowledge-forge/internal/db"
 	"github.com/tarunngusain08/knowledge-forge/internal/rag"
 )
@@ -19,12 +21,13 @@ func NewPostgresFTS(store FTSStore) *PostgresFTS {
 	return &PostgresFTS{store: store}
 }
 
-func (p *PostgresFTS) Search(ctx context.Context, query string, topK int) ([]rag.RetrievalHit, error) {
+func (p *PostgresFTS) Search(ctx context.Context, userID uuid.UUID, query string, topK int) ([]rag.RetrievalHit, error) {
 	if topK <= 0 {
 		topK = 20
 	}
 	rows, err := p.store.SearchChunksFTS(ctx, db.SearchChunksFTSParams{
 		WebsearchToTsquery: query,
+		OwnerUserID:        userID,
 		Limit:              int32(topK),
 	})
 	if err != nil {

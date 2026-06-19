@@ -176,12 +176,16 @@ SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_cou
        d.filename
 FROM chunks c
 JOIN documents d ON d.id = c.document_id
-WHERE c.document_id = $1 AND c.chunk_index = $2
+WHERE c.document_id = $1
+  AND c.chunk_index = $2
+  AND d.owner_user_id = $3
+  AND d.status = 'indexed'
 `
 
 type GetChunkByVectorIDParams struct {
-	DocumentID uuid.UUID `json:"document_id"`
-	ChunkIndex int32     `json:"chunk_index"`
+	DocumentID  uuid.UUID `json:"document_id"`
+	ChunkIndex  int32     `json:"chunk_index"`
+	OwnerUserID uuid.UUID `json:"owner_user_id"`
 }
 
 type GetChunkByVectorIDRow struct {
@@ -197,7 +201,7 @@ type GetChunkByVectorIDRow struct {
 }
 
 func (q *Queries) GetChunkByVectorID(ctx context.Context, arg GetChunkByVectorIDParams) (GetChunkByVectorIDRow, error) {
-	row := q.db.QueryRow(ctx, getChunkByVectorID, arg.DocumentID, arg.ChunkIndex)
+	row := q.db.QueryRow(ctx, getChunkByVectorID, arg.DocumentID, arg.ChunkIndex, arg.OwnerUserID)
 	var i GetChunkByVectorIDRow
 	err := row.Scan(
 		&i.ID,
@@ -440,14 +444,16 @@ SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.token_cou
 FROM chunks c
 JOIN documents d ON d.id = c.document_id
 WHERE d.status = 'indexed'
+  AND d.owner_user_id = $2
   AND c.search_vector @@ websearch_to_tsquery('english', $1)
 ORDER BY lexical_score DESC, c.created_at DESC
-LIMIT $2
+LIMIT $3
 `
 
 type SearchChunksFTSParams struct {
-	WebsearchToTsquery string `json:"websearch_to_tsquery"`
-	Limit              int32  `json:"limit"`
+	WebsearchToTsquery string    `json:"websearch_to_tsquery"`
+	OwnerUserID        uuid.UUID `json:"owner_user_id"`
+	Limit              int32     `json:"limit"`
 }
 
 type SearchChunksFTSRow struct {
@@ -464,7 +470,7 @@ type SearchChunksFTSRow struct {
 }
 
 func (q *Queries) SearchChunksFTS(ctx context.Context, arg SearchChunksFTSParams) ([]SearchChunksFTSRow, error) {
-	rows, err := q.db.Query(ctx, searchChunksFTS, arg.WebsearchToTsquery, arg.Limit)
+	rows, err := q.db.Query(ctx, searchChunksFTS, arg.WebsearchToTsquery, arg.OwnerUserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

@@ -116,10 +116,12 @@ func (s *Service) processDocument(ctx context.Context, documentID uuid.UUID) err
 		Filename:   document.Filename,
 		Content:    text,
 		Metadata: map[string]any{
-			"filename":     document.Filename,
-			"document_id":  document.ID.String(),
-			"content_type": document.ContentType,
-			"sha256":       document.Sha256,
+			"source_type":   "document_chunk",
+			"owner_user_id": document.OwnerUserID.String(),
+			"filename":      document.Filename,
+			"document_id":   document.ID.String(),
+			"content_type":  document.ContentType,
+			"sha256":        document.Sha256,
 		},
 	})
 	if err != nil {
