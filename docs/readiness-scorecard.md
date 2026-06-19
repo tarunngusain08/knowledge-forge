@@ -1,38 +1,46 @@
 # Project Readiness Scorecard
 
-This scorecard summarizes the validated state after Phase 18.6.
+This scorecard summarizes Knowledge Forge after Phase 19 Planning Review and
+the independent roadmap challenge.
 
 ## Overall Status
 
 ```text
-Phase 17: accepted
+Phase 17: accepted product conformance
 Phase 18: partially proven benchmark value
-Phase 18.5: generalized within infrastructure/tooling scope
-Phase 18.6: security remediation complete
+Phase 18.5: generalized within infrastructure/tooling scope, moderately stable
+Phase 18.6: tenant-isolation security remediation complete
+Phase 18.7: release readiness READY
+Phase 18.8: security hardening complete
+Phase 19: Larger Corpus Expansion selected, not started
 Acceptance gates: 6/6 pass
 Evaluator issues: 0
-Recommended next step: Phase 18.7 Release Readiness Review, then human-reviewed Phase 19 planning
+Current next step: human-reviewed Larger Corpus Expansion
 ```
 
 ## Feature Completeness
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Document RAG foundation | Implemented | Upload, chunking, embeddings, vector retrieval, generation, citations. |
-| Provider abstraction | Implemented | Core logic depends on internal interfaces, not direct SDK calls. |
-| Async ingestion | Implemented | Durable jobs and worker flow exist for document/repository processing. |
+| Document RAG foundation | Implemented | Upload, chunking, embeddings, vector retrieval, lexical retrieval, generation, and citations. |
+| Provider abstraction | Implemented | Core logic depends on internal interfaces instead of direct SDK calls. |
+| Async ingestion | Implemented | Durable jobs and worker flow exist for document and repository processing. |
 | Hybrid document retrieval | Implemented | Pinecone dense retrieval plus PostgreSQL FTS and fusion. |
-| Repository indexing | Implemented | One repository snapshot can be indexed with files, chunks, commit SHA, and citations. |
+| Repository indexing | Implemented | Repository snapshots include files, chunks, commit SHA provenance, and citation metadata. |
 | Repository Q&A | Implemented and Phase 17 accepted | Answers are scoped to repository evidence and validated against acceptance gates. |
-| Deep-Dive Reports | Implemented and Phase 17 accepted | On-demand report JSON and Markdown export with evidence quality. |
-| Planning and impact analysis | Implemented as read-only workflows | Grounded in retrieved evidence; not autonomous code mutation. |
-| React/Vite UI | Implemented | Primary product UI; Streamlit remains fallback. |
-| Observability and costs | Implemented | Structured logs, traces, provenance, token/cost accounting. |
+| Deep-Dive Reports | Implemented and Phase 17 accepted | On-demand report JSON and Markdown export with evidence quality and missing context. |
+| Planning and impact analysis | Implemented as read-only workflows | Grounded in retrieved evidence; no autonomous code mutation. |
+| React/Vite UI | Implemented | Primary product UI served by `Dockerfile.ui`; Streamlit remains fallback source. |
+| Observability and costs | Implemented | Structured logs, traces, provenance, token accounting, cost accounting, and OpenTelemetry hooks. |
 | Acceptance validation | Implemented and passing | Six gates pass with zero evaluator issues. |
 | Phase 18 benchmark proof | Complete and partially proven | Knowledge Forge outperformed baselines in architecture, dependency/impact, and grounding categories. |
 | Phase 18.5 multi-corpus benchmark | Complete within infrastructure/tooling scope | Helm and OpenTelemetry Collector results generalized with moderate stability. |
 | Phase 18.6 security remediation | Complete | Tenant isolation, trace authorization, repository input guards, and internal worker auth are documented and regression-tested. |
-| Phase 19 static intelligence | Future candidate | Must be justified by benchmark and release-readiness evidence; not started. |
+| Phase 18.8 security hardening | Complete | IDOR, refusal leakage, deleted-document race, and upload DoS findings were reproduced, fixed, and regression-tested. |
+| Phase 19 Larger Corpus Expansion | Selected, not started | Approved with reservations by independent challenge review; human review required before implementation. |
+| Repository Structure Indexing | Future investigation candidate | Not selected for implementation unless future benchmark failures cluster around architecture/dependency navigation. |
+| Static Code Intelligence | Future investigation candidate | Not selected unless symbol/reference failures dominate or high retrieval recall coexists with low reasoning accuracy. |
+| Graph Retrieval | Rejected for now | Not justified until graph-specific failures dominate benchmark results. |
 
 ## Validation Coverage
 
@@ -49,32 +57,61 @@ Recommended next step: Phase 18.7 Release Readiness Review, then human-reviewed 
 | Phase 18 benchmark proof | Published |
 | Phase 18.5 multi-corpus benchmark | Published |
 | Phase 18.6 security proof | Published |
+| Phase 18.7 release readiness proof | Published |
+| Phase 18.8 security hardening proof | Published |
+| Phase 19 planning review | Published |
+| Independent roadmap challenge | Published |
 
 ## Known Limitations
 
 - Benchmark proof is strongest for synthetic and infrastructure/tooling corpora;
-  it does not yet prove generalization to all repository types.
-- Static code intelligence is not enabled as a validated default.
+  it does not yet prove generalization to every repository type.
+- Phase 19 Larger Corpus Expansion is selected but not implemented.
+- Static Code Intelligence is not enabled as a validated default.
+- Repository Structure Indexing is not selected implementation work.
 - Graph retrieval, multi-repo intelligence, autonomous agents, PR review, and
   code generation are out of scope.
 - Reports are generated on demand and not persisted as first-class report
   records in v1.
-- Tenant isolation for document retrieval and retrieval traces is hardened, but
-  full enterprise SaaS tenancy remains a future product path.
+- Tenant isolation and deployment guardrails are hardened, but full enterprise
+  SaaS operation, production telemetry, and long-running abuse monitoring remain
+  future product work.
 
 ## Readiness Assessment
 
 | Dimension | Rating | Rationale |
 | --- | --- | --- |
-| Product clarity | Strong | README and docs now explain the workflow without raw audit history. |
-| Architecture | Strong | Clear Go service boundaries, provider interfaces, and GCP deployment path. |
-| Validation rigor | Strong | Hardened acceptance framework and accepted Phase 17 reality result. |
-| Demo readiness | Strong | Repository import, Q&A, Deep-Dive Report, evidence, and proof story are aligned. |
-| Benchmark maturity | Strong | Phase 18 and 18.5 provide baseline and multi-corpus evidence, with stated scope limits. |
-| Security maturity | Strong | Phase 18.6 remediated tenant-isolation and deployment trust-boundary findings with regression tests. |
-| Production SaaS maturity | Medium | Tenant isolation and deployment guardrails exist, but full SaaS operation is future work. |
+| Product clarity | Strong | README and docs explain the workflow, architecture, validation, and roadmap without raw audit history. |
+| Architecture | Strong | Go service boundaries, provider interfaces, retrieval pipeline, repository model, and GCP deployment path are documented. |
+| Validation rigor | Strong | Hardened acceptance framework, Phase 17 reality result, Phase 18 benchmarks, and Phase 18.5 multi-corpus proof exist. |
+| Demo readiness | Strong | Repository import, Q&A, Deep-Dive Report, evidence, implementation planning, impact analysis, and proof story are aligned. |
+| Benchmark maturity | Strong within current scope | Phase 18 and 18.5 provide baseline and multi-corpus evidence with clear limitations. |
+| Security maturity | Strong for current scope | Phase 18.6 and 18.8 remediated tenant-isolation, trust-boundary, refusal-leakage, lifecycle, and upload findings. |
+| Roadmap discipline | Strong | Phase 19 decision survived independent challenge but remains bounded to corpus expansion. |
+| Production SaaS maturity | Medium | Security guardrails exist, but full SaaS operations and production telemetry are future work. |
 
 ## Recommended Next Step
 
-Complete the Phase 18.7 release-readiness review and obtain human acceptance
-before Phase 19 planning begins.
+Proceed only after human review with:
+
+```text
+Phase 19: Larger Corpus Expansion
+```
+
+Purpose:
+
+```text
+Test whether Knowledge Forge's repository-intelligence advantage continues to
+hold across additional repository families.
+```
+
+Boundaries:
+
+- no retrieval architecture changes
+- no Repository Structure Indexing implementation
+- no Static Code Intelligence implementation
+- no Graph Retrieval implementation
+- no benchmark label changes after freeze
+
+Success should be measured by new cross-corpus stability and failure-cluster
+evidence, not by roadmap optimism.

@@ -1,160 +1,261 @@
 # Knowledge Forge Architecture
 
-Knowledge Forge is a production-style evidence-grounded knowledge assistant. It
-supports the original company-document RAG path and now includes a focused
-repository-intelligence path for cited codebase Q&A, deep-dive reports,
-planning, and impact analysis.
+Knowledge Forge is an evidence-grounded repository intelligence system. It has
+two related paths:
+
+- document RAG for uploaded source documents
+- repository intelligence for codebase Q&A, Deep-Dive Reports, read-only
+  implementation plans, and impact analysis
+
+The architecture is designed around one rule:
+
+```text
+Claims require evidence.
+```
+
+That rule affects retrieval, support gates, report generation, traces,
+benchmarks, and security boundaries.
+
+## System Context
 
 ```mermaid
 flowchart LR
-  U[User Question] --> QR[Question Rewriter]
-  QR --> QE[Vertex Query Embedding]
-  QE --> P[Pinecone Dense Retrieval]
-  QR --> FTS[PostgreSQL Full Text Search]
-  P --> RRF[Reciprocal Rank Fusion]
-  FTS --> RRF
-  RRF --> RR[Vertex Ranking API]
-  RR --> G[Gemini Grounded Generation]
-  G --> C[Answer + Citations]
+  User["User"] --> UI["React/Vite UI"]
+  User --> API["Go Chi API"]
+  UI --> API
+  API --> Auth["Auth and user context"]
+  API --> Documents["Document service"]
+  API --> Repositories["Repository service"]
+  API --> CodeQA["Repository QA service"]
+  API --> Reports["Deep-Dive Report service"]
+  API --> Plans["Plan and impact services"]
+  CodeQA --> Retrieval["Evidence retrieval pipeline"]
+  Reports --> Retrieval
+  Plans --> Retrieval
+  Retrieval --> Postgres["PostgreSQL and FTS"]
+  Retrieval --> Pinecone["Pinecone vectors"]
+  Retrieval --> Vertex["Vertex AI and Gemini"]
+  API --> Traces["Retrieval traces and feedback"]
 ```
 
-## Repository Intelligence MVP
+## Runtime Components
 
-```mermaid
-flowchart LR
-  R[Repository or Branch] --> G[Git Worktree Resolver]
-  G --> S[Safe File Walker]
-  S --> C[Code Chunker]
-  C --> PG[(PostgreSQL Files + Chunks)]
-  C --> E[Vertex or Mock Embeddings]
-  E --> PC[Pinecone Vectors]
-```
+| Component | Responsibility |
+| --- | --- |
+| React/Vite UI | Primary product surface for repository import, Q&A, evidence, reports, planning, impact analysis, feedback, and Markdown export. |
+| Streamlit fallback | Lightweight fallback/demo surface under `ui/streamlit`. |
+| Go Chi API | HTTP API, auth, request validation, service orchestration, trace access, and internal worker routes. |
+| Worker | Async indexing and repository ingestion job processing. |
+| PostgreSQL | Relational source of truth for users, documents, repositories, snapshots, files, chunks, traces, feedback, jobs, and lexical search. |
+| Pinecone | Dense vector retrieval. |
+| Vertex AI | Query embeddings, optional reranking, and Gemini generation. |
+| Python eval-runner | Acceptance validation, benchmark scoring, baseline comparisons, and proof-report generation. |
 
-```mermaid
-flowchart LR
-  Q[Repository Question] --> QC[Query Classifier]
-  QC --> RP[Adaptive Retrieval Policy]
-  RP --> QE[Query Embedding]
-  QE --> P[Pinecone Dense Retrieval]
-  P --> H[Hydrate Chunks from PostgreSQL]
-  H --> RR{Reranker Enabled?}
-  RR -->|yes| V[Vertex Ranking API]
-  RR -->|no| CTX[Context Assembly]
-  V --> CTX
-  CTX --> B[Token Budgeted Evidence]
-  B --> G[Gemini Grounded Generation]
-  G --> A[Answer + File/Line Citations]
-  A --> D[Deep-Dive Report + Markdown]
-  A --> W[Read-only Plan or Impact Analysis]
-  A --> T[Trace + Provenance + Cost]
-  D --> EQ[Evidence Quality + Missing Context]
-  W --> E[Evidence-derived Confidence]
-```
-
-Repository model:
+## Repository Intelligence Model
 
 ```text
 Repository
-└── Branch
-    └── Snapshot(commit SHA)
-        ├── Files
-        ├── Chunks
-        ├── Symbols
-        └── Graph
++-- Branch
+    +-- Snapshot(commit SHA)
+        +-- Files
+        +-- Chunks
+        +-- Symbols
+        +-- Graph
 ```
 
-Phase 12 freezes the repository retrieval MVP at dense retrieval scoped by
-repository and snapshot metadata. Lexical, symbol, and static graph retrieval
-remain future benchmarked improvements rather than default behavior.
+The repository snapshot is the evidence boundary. Repository answers should be
+traceable to a commit SHA, file paths, line ranges, excerpts, and retrieved
+chunks.
+
+The `Graph` part of the model records future-facing structure, but graph
+retrieval is not a selected implementation direction. Phase 18.5 did not find
+dominant graph-specific failures, so graph retrieval remains rejected until
+benchmark evidence changes.
+
+## Document RAG Flow
+
+```mermaid
+flowchart LR
+  Q["Question"] --> QR["Question rewriting"]
+  QR --> Emb["Vertex query embedding"]
+  Emb --> Dense["Pinecone dense retrieval"]
+  QR --> FTS["PostgreSQL FTS retrieval"]
+  Dense --> Fusion["Reciprocal rank fusion"]
+  FTS --> Fusion
+  Fusion --> Rerank["Optional Vertex reranking"]
+  Rerank --> Context["Context assembly"]
+  Context --> Gemini["Gemini grounded generation"]
+  Gemini --> Answer["Answer, citations, trace"]
+```
+
+Document RAG supports the original knowledge-base path. It is useful for
+uploaded policies, project notes, and supporting documents.
+
+## Repository Q&A Flow
+
+```mermaid
+flowchart LR
+  Q["Repository question"] --> Classifier["Query classification"]
+  Classifier --> Policy["Adaptive retrieval budget"]
+  Policy --> Retrieval["Repository and snapshot scoped retrieval"]
+  Retrieval --> Support["Evidence support gate"]
+  Support --> Context["Required-evidence-aware context assembly"]
+  Context --> Generation["Grounded generation"]
+  Generation --> Output["Answer, citations, trace, feedback target"]
+```
+
+Repository Q&A differs from generic RAG in two important ways:
+
+1. Evidence must belong to the requester and the selected repository snapshot.
+2. Evidence must actually support the question.
+
+Example:
+
+```text
+evidence exists != evidence supports the question
+```
+
+A payroll UI question cannot be supported by a random UI file. A revenue API
+question cannot be supported by a generic API handler. The support gate should
+refuse when the evidence does not satisfy the question.
+
+## Deep-Dive Report Flow
 
 ```mermaid
 flowchart TB
-  API[Cloud Run API] --> SQL[(Cloud SQL PostgreSQL)]
-  API --> PC[Pinecone]
-  API --> VX[Vertex AI]
-  UI[Cloud Run React UI] --> API
-  TASKS[Cloud Tasks] --> API
-  WORKER[Cloud Run Worker] --> SQL
-  WORKER --> PC
-  WORKER --> VX
-  TRACE[Cloud Trace] -. OpenTelemetry .- API
-  TRACE -. OpenTelemetry .- WORKER
+  Request["Deep-Dive Report request"] --> Shared["Shared broad evidence pass"]
+  Shared --> Sections["Report section drafting"]
+  Sections --> Weak["Weak-section detection"]
+  Weak --> Followup["Targeted follow-up retrieval"]
+  Followup --> Grounding["Claim grounding mappings"]
+  Grounding --> Quality["Evidence quality and missing context"]
+  Quality --> Export["Structured JSON and Markdown export"]
 ```
 
-The Go service owns API, orchestration, auth, persistence, worker coordination,
-retrieval observability, and cost accounting. Provider SDKs are hidden behind
-internal interfaces so the core business logic does not depend on Vertex,
-Pinecone, LangChainGo, or Ragas directly.
+Deep-Dive Reports are generated on demand. They are not persisted as first-class
+database objects in v1. Durable review data comes from repository snapshots,
+citations, retrieval traces, line ranges, and claim-grounding mappings.
 
-The primary UI is a React/Vite product surface focused on the North-Star
-workflow. It keeps repository import, question, evidence, plan outline, impact
-analysis, deep-dive reports, trace/provenance, Markdown export, and structured
-feedback in one demo-oriented flow.
-The Streamlit UI remains in `ui/streamlit` as a fallback.
+## Planning And Impact Analysis
 
-Hybrid retrieval uses Pinecone for dense semantic recall and PostgreSQL FTS for
-exact identifiers, acronyms, filenames, and policy names. Reciprocal Rank Fusion
-combines both candidate sets before reranking.
+Implementation planning and impact analysis are read-only workflows. They reuse
+the repository evidence pipeline and return structured outputs such as:
 
-Repository Q&A uses Pinecone dense retrieval in this milestone. Every repository
-answer is tied to a repository, branch, immutable commit SHA snapshot, retrieved
-chunk IDs, file path, and line range. The context is treated as untrusted input;
-unsupported claims should be refused rather than invented.
+- observed evidence
+- recommended changes
+- impacted files
+- missing context
+- test considerations
+- risks
+- confidence derived from evidence
 
-Phase 14 adds adaptive retrieval policy before repository generation. The policy
-classifies the question, chooses candidate depth, decides whether reranking is
-worth the extra latency/cost, and sets the context token budget. Context
-assembly then collapses adjacent chunks from the same file and trims the final
-evidence set before Gemini sees it. Retrieval traces persist the policy,
-retrieval path, stage contributions, retrieved chunk IDs, prompt version, model,
-latency, and estimated cost.
+The system does not mutate code, create PRs, generate patches, or run agents.
 
-Phase 16 adds two constrained repository workflows: implementation planning and
-impact analysis. Both call the same evidence-grounded repository retrieval path
-as Q&A, then return structured sections such as observed evidence, recommended
-changes, missing context, tests, impacted files, and risks. Confidence is
-derived from citations, retrieval scores, context volume, commit provenance, and
-missing-context signals; it is not model self-confidence. The workflows are
-read-only and do not mutate code, open PRs, or run autonomous agents.
+## Security Boundaries
 
-Phase 17 adds repository deep-dive reports. A report starts with one shared
-broad evidence pass, runs up to four targeted follow-up retrievals for
-high-value weak sections, and returns structured JSON plus Markdown export. The
-report is generated on demand rather than stored as a database object; durable
-debugging still comes from snapshot provenance and retrieval traces.
+Security hardening is part of the architecture, not an afterthought.
 
-## Repository Ingestion Safety
+Current validated boundaries include:
 
-Repository ingestion skips symlinks, ignored build/dependency directories,
-binary files, unsupported extensions, empty files, and files above the MVP size
-limit. Remote clones run with a timeout. Local paths are normalized before
-walking so path traversal and accidental out-of-root reads are avoided.
+- dense retrieval hydration requires requester ownership and indexed document
+  status
+- PostgreSQL FTS retrieval is owner-scoped
+- retrieval traces are owner-scoped
+- refused answers redact hydrated retrieval evidence and prompt previews
+- deleted documents cannot become retrievable through stale indexing workers
+- repository ingestion skips symlink escapes
+- hosted deployments reject local repository paths by default
+- remote repository URLs are limited to approved HTTPS Git hosts
+- internal worker routes require `INTERNAL_WORKER_TOKEN`
+- oversized multipart uploads are capped before multipart parsing
 
-## Evaluation
+Proof:
 
-The Go API computes retrieval metrics: Hit Rate, Recall@K, MRR, retrieval
-latency, and citation coverage. The Python `eval-runner` owns the Ragas JSONL
-contract for generation metrics: faithfulness, answer relevancy, context
-precision, and context recall.
+- [Phase 18.6 Security Remediation](proof/phase18-6-security-remediation.md)
+- [Phase 18.8 Security Hardening](proof/phase18-8-security-hardening.md)
 
 ## Provider Boundaries
 
-Core business logic depends on interfaces in `internal/rag`:
+Core business logic depends on interfaces rather than direct cloud SDK calls.
+Provider implementations live under `internal/providers`.
 
-- `LLMProvider`
-- `EmbeddingProvider`
-- `VectorStoreProvider`
-- `RerankerProvider`
-- `LexicalSearchProvider`
-- `ChunkingProvider`
-- `Retriever`
+Important provider categories:
 
-Implementations live under `internal/providers`. LangChainGo is currently used
-only by the chunking adapter.
+- LLM generation
+- embeddings
+- vector store
+- reranking
+- lexical search
+- chunking
+- retrieval orchestration
 
-## Document Storage
+This keeps tests and local development viable with mock providers while leaving
+the production path open for Vertex AI, Pinecone, and managed GCP services.
+
+## Data And Storage
 
 v1 stores uploaded source files in PostgreSQL `BYTEA`. This keeps local and
-Cloud Run setup small and makes upload + metadata changes transactional. For
-larger production deployments, raw file bytes should move to GCS while
-PostgreSQL keeps document metadata, object URI, checksum, and indexing state.
+Cloud Run setup simple and makes upload plus metadata changes transactional.
+
+For larger production deployments, raw file bytes should move to GCS while
+PostgreSQL keeps:
+
+- document metadata
+- object URI
+- checksum
+- indexing state
+- ownership
+- citations and trace references
+
+See [Storage Notes](storage.md).
+
+## Deployment Shape
+
+```mermaid
+flowchart TB
+  UI["Cloud Run UI"] --> API["Cloud Run API"]
+  API --> SQL["Cloud SQL PostgreSQL"]
+  API --> Pinecone["Pinecone"]
+  API --> Vertex["Vertex AI"]
+  Tasks["Cloud Tasks"] --> API
+  Worker["Cloud Run Worker"] --> SQL
+  Worker --> Pinecone
+  Worker --> Vertex
+  Secrets["Secret Manager"] --> API
+  Secrets --> Worker
+  Trace["Cloud Trace / Monitoring"] -.-> API
+  Trace -.-> Worker
+```
+
+The documented production target is Google Cloud Run with Cloud SQL, Secret
+Manager, Cloud Tasks, Vertex AI, Pinecone, and Cloud Trace/Monitoring.
+
+See:
+
+- [Deployment Overview](../deploy/README.md)
+- [Cloud Run Deployment](../deploy/cloud-run.md)
+
+## Evaluation Architecture
+
+The Python `eval-runner` owns the benchmark and acceptance reporting surface.
+It evaluates saved candidate outputs against frozen fixtures and baselines.
+
+Validation layers:
+
+- acceptance gates for refusal, answer relevance, architecture evidence, metric
+  integrity, label completeness, and adversarial behavior
+- Phase 18 benchmark proof against keyword and retrieval-only baselines
+- Phase 18.5 multi-corpus benchmark proof
+- benchmark leakage review to ensure runtime product code does not reference
+  benchmark labels or outputs
+- release-readiness and security proof docs
+
+Current roadmap decision:
+
+```text
+Proceed with Larger Corpus Expansion
+```
+
+The independent challenge review approved that decision with reservations. The
+next work should gather broader corpus evidence, not add graph retrieval,
+Repository Structure Indexing, or Static Code Intelligence by default.
