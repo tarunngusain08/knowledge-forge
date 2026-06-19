@@ -11,12 +11,15 @@ import (
 	"github.com/tarunngusain08/knowledge-forge/internal/documents"
 )
 
+const multipartFormOverheadBytes int64 = 1 << 20
+
 func (s *Server) handleUploadDocument(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "missing authenticated user")
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes+multipartFormOverheadBytes)
 	if err := r.ParseMultipartForm(s.maxUploadBytes); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart form")
 		return

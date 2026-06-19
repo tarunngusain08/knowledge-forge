@@ -103,18 +103,23 @@ func (s *Server) handleCreateRepositoryIngestion(w http.ResponseWriter, r *http.
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		job, _ = s.repositories.GetIngestion(r.Context(), job.ID)
+		job, _ = s.repositories.GetIngestionForUser(r.Context(), user.ID, job.ID)
 	}
 	writeJSON(w, http.StatusAccepted, job)
 }
 
 func (s *Server) handleGetRepositoryIngestion(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing user")
+		return
+	}
 	jobID, err := uuid.Parse(chi.URLParam(r, "job_id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid job id")
 		return
 	}
-	job, err := s.repositories.GetIngestion(r.Context(), jobID)
+	job, err := s.repositories.GetIngestionForUser(r.Context(), user.ID, jobID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "ingestion job not found")
 		return
@@ -314,6 +319,10 @@ func (s *Server) handleCreateRepositoryFeedback(w http.ResponseWriter, r *http.R
 	}
 	if req.TraceID == uuid.Nil {
 		writeError(w, http.StatusBadRequest, "trace_id is required")
+		return
+	}
+	if _, err := s.repoStore.GetRetrievalTraceForUser(r.Context(), user.ID, req.TraceID); err != nil {
+		writeError(w, http.StatusNotFound, "retrieval trace not found")
 		return
 	}
 	feedback, err := s.repoStore.CreateFeedback(r.Context(), repositories.CreateFeedbackInput{

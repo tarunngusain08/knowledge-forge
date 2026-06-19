@@ -1,10 +1,17 @@
 package httpapi
 
 import (
+	"bytes"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
+
+	"github.com/tarunngusain08/knowledge-forge/internal/auth"
 )
 
 func TestWriteJSONSetsSafeResponseHeaders(t *testing.T) {
@@ -76,4 +83,52 @@ func TestReadJSONRejectsOversizedBody(t *testing.T) {
 	if err := readJSON(recorder, req, &payload); err == nil {
 		t.Fatalf("expected oversized body to fail")
 	}
+}
+
+func TestUploadDocumentRejectsOversizedMultipartBeforeFullParse(t *testing.T) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "large.txt")
+	if err != nil {
+		t.Fatalf("create form file: %v", err)
+	}
+	if _, err := part.Write(bytes.Repeat([]byte("a"), int(multipartFormOverheadBytes)+64)); err != nil {
+		t.Fatalf("write multipart body: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	reader := &countingReadCloser{Reader: bytes.NewReader(body.Bytes())}
+	req := httptest.NewRequest(http.MethodPost, "/documents", reader)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req = req.WithContext(auth.ContextWithUser(req.Context(), auth.User{ID: uuid.New(), Email: "owner@example.com"}))
+	recorder := httptest.NewRecorder()
+	server := &Server{maxUploadBytes: 32}
+
+	server.handleUploadDocument(recorder, req)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+	if reader.bytesRead >= int64(body.Len()) {
+		t.Fatalf("multipart parser consumed full body before rejecting: read=%d body=%d", reader.bytesRead, body.Len())
+	}
+	if reader.bytesRead > server.maxUploadBytes+multipartFormOverheadBytes+4096 {
+		t.Fatalf("multipart parser read too far before rejecting: read=%d", reader.bytesRead)
+	}
+}
+
+type countingReadCloser struct {
+	io.Reader
+	bytesRead int64
+}
+
+func (r *countingReadCloser) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.bytesRead += int64(n)
+	return n, err
+}
+
+func (r *countingReadCloser) Close() error {
+	return nil
 }

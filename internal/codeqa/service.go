@@ -144,17 +144,27 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 			OutputTokens: generation.OutputTokens,
 		})
 	}
+	traceRetrieval := retrieval
+	responseRetrieval := retrieval
+	contextTokenCount := assembly.TokenCount
+	promptPreview := rag.BuildGroundedPrompt(rag.GenerateRequest{RewrittenQuery: rewritten, Context: assembly.Hits})
+	if !support.Answerable {
+		traceRetrieval = redactRefusedRetrieval(retrieval)
+		responseRetrieval = traceRetrieval
+		contextTokenCount = 0
+		promptPreview = ""
+	}
 	traceID, err := s.repos.CreateRetrievalTrace(ctx, repositories.RetrievalTraceInput{
 		UserID:             req.UserID,
 		RepositoryID:       req.RepositoryID,
-		SnapshotID:         retrieval.SnapshotID,
+		SnapshotID:         traceRetrieval.SnapshotID,
 		BranchName:         branch,
 		QueryCategory:      policy.Category,
 		RetrievalPath:      policy.RetrievalPath,
 		RetrievalConfig:    policy.Config,
-		RetrievedChunkIDs:  retrieval.RetrievedChunkIDs,
-		StageContributions: retrieval.StageContributions,
-		ContextTokenCount:  assembly.TokenCount,
+		RetrievedChunkIDs:  traceRetrieval.RetrievedChunkIDs,
+		StageContributions: traceRetrieval.StageContributions,
+		ContextTokenCount:  contextTokenCount,
 		PromptVersion:      rag.PromptVersion,
 		GenerationModel:    generation.Model,
 		EstimatedCostUSD:   cost,
@@ -162,14 +172,14 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 		RewrittenQuery:     rewritten,
 		TopK:               policy.TopK,
 		RerankerEnabled:    policy.RerankerEnabled,
-		DenseHits:          retrieval.DenseHits,
-		LexicalHits:        retrieval.LexicalHits,
-		SymbolHits:         retrieval.SymbolHits,
-		GraphHits:          retrieval.GraphHits,
-		FusedHits:          retrieval.FusedHits,
-		RerankedHits:       retrieval.RerankedHits,
-		PromptPreview:      rag.BuildGroundedPrompt(rag.GenerateRequest{RewrittenQuery: rewritten, Context: assembly.Hits}),
-		LatencyMS:          retrieval.LatencyMilliseconds(),
+		DenseHits:          traceRetrieval.DenseHits,
+		LexicalHits:        traceRetrieval.LexicalHits,
+		SymbolHits:         traceRetrieval.SymbolHits,
+		GraphHits:          traceRetrieval.GraphHits,
+		FusedHits:          traceRetrieval.FusedHits,
+		RerankedHits:       traceRetrieval.RerankedHits,
+		PromptPreview:      promptPreview,
+		LatencyMS:          traceRetrieval.LatencyMilliseconds(),
 	})
 	if err != nil {
 		return AskResponse{}, fmt.Errorf("create retrieval trace: %w", err)
@@ -188,20 +198,20 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 	return AskResponse{
 		Answer:    generation.Answer,
 		Citations: generation.Citations,
-		Retrieval: retrieval,
+		Retrieval: responseRetrieval,
 		TraceID:   traceID,
 		Provenance: AnswerProvenance{
 			RepositoryID:       req.RepositoryID,
 			BranchName:         branch,
-			SnapshotID:         retrieval.SnapshotID,
-			CommitSHA:          retrieval.CommitSHA,
+			SnapshotID:         responseRetrieval.SnapshotID,
+			CommitSHA:          responseRetrieval.CommitSHA,
 			QueryCategory:      policy.Category,
 			PromptVersion:      rag.PromptVersion,
 			RetrievalConfig:    policy.Config,
 			RetrievalPath:      policy.RetrievalPath,
-			RetrievedChunkIDs:  retrieval.RetrievedChunkIDs,
-			StageContributions: retrieval.StageContributions,
-			ContextTokenCount:  assembly.TokenCount,
+			RetrievedChunkIDs:  responseRetrieval.RetrievedChunkIDs,
+			StageContributions: responseRetrieval.StageContributions,
+			ContextTokenCount:  contextTokenCount,
 			EstimatedCostUSD:   cost,
 			Model:              generation.Model,
 		},
@@ -209,6 +219,18 @@ func (s *Service) Ask(ctx context.Context, req AskRequest) (AskResponse, error) 
 		InputTokens:  generation.InputTokens,
 		OutputTokens: generation.OutputTokens,
 	}, nil
+}
+
+func redactRefusedRetrieval(result rag.RetrievalResult) rag.RetrievalResult {
+	result.DenseHits = nil
+	result.LexicalHits = nil
+	result.SymbolHits = nil
+	result.GraphHits = nil
+	result.FusedHits = nil
+	result.RerankedHits = nil
+	result.RetrievedChunkIDs = nil
+	result.ContextTokenCount = 0
+	return result
 }
 
 func (s *Service) completeMissingSupportEvidence(ctx context.Context, req AskRequest, branch string, policy retrievalpkg.Policy, retrieval rag.RetrievalResult, assembly rag.ContextAssembly, support supportGateResult) (rag.RetrievalResult, rag.ContextAssembly, supportGateResult, error) {

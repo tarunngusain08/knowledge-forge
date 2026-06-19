@@ -92,6 +92,13 @@ func (s *Service) GetIngestion(ctx context.Context, jobID uuid.UUID) (codeintel.
 	return s.store.GetIngestionJob(ctx, jobID)
 }
 
+func (s *Service) GetIngestionForUser(ctx context.Context, userID, jobID uuid.UUID) (codeintel.IngestionJob, error) {
+	if userID == uuid.Nil {
+		return codeintel.IngestionJob{}, errors.New("owner user id is required")
+	}
+	return s.store.GetIngestionJobForUser(ctx, jobID, userID)
+}
+
 func repoName(localPath, remoteURL string) string {
 	value := strings.TrimSpace(localPath)
 	if value == "" {

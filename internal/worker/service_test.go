@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/tarunngusain08/knowledge-forge/internal/db"
+	"github.com/tarunngusain08/knowledge-forge/internal/documents"
 	"github.com/tarunngusain08/knowledge-forge/internal/providers/langchain"
 	"github.com/tarunngusain08/knowledge-forge/internal/providers/mock"
 )
@@ -66,12 +67,59 @@ func TestProcessJobIndexesDocument(t *testing.T) {
 	}
 }
 
+func TestProcessJobDoesNotPersistChunksWhenDocumentDeletedDuringIndexing(t *testing.T) {
+	documentID := uuid.New()
+	jobID := uuid.New()
+	store := &fakeStore{
+		job: db.IndexingJob{ID: jobID, DocumentID: documentID, Status: "queued"},
+		document: db.Document{
+			ID:          documentID,
+			OwnerUserID: uuid.New(),
+			Filename:    "handbook.md",
+			ContentType: "text/markdown; charset=utf-8",
+			SizeBytes:   128,
+			Sha256:      "abc",
+			RawBytes:    []byte("# Handbook\nRemote work is allowed with manager approval."),
+			Status:      documents.StatusUploaded,
+		},
+		deleteAfterIndexingMark: true,
+	}
+	vector := &mock.VectorStore{}
+	service := NewService(
+		store,
+		langchain.Extractor{},
+		langchain.RecursiveChunker{ChunkSize: 80, ChunkOverlap: 5},
+		mock.Embeddings{Dimension: 8},
+		vector,
+		slog.Default(),
+		"test-worker",
+	)
+
+	if err := service.ProcessJob(context.Background(), jobID); err == nil {
+		t.Fatalf("expected deleted document to stop indexing")
+	}
+	if store.documentStatus != documents.StatusDeleted {
+		t.Fatalf("document status = %s, want deleted", store.documentStatus)
+	}
+	if len(store.chunks) != 0 {
+		t.Fatalf("deleted document should not persist chunks: %#v", store.chunks)
+	}
+	if len(vector.Records) != 0 {
+		t.Fatalf("deleted document should not upsert vectors: %#v", vector.Records)
+	}
+	if store.jobStatus != "failed" {
+		t.Fatalf("job status = %s, want failed", store.jobStatus)
+	}
+}
+
 type fakeStore struct {
-	job            db.IndexingJob
-	document       db.Document
-	chunks         []db.CreateChunkRow
-	documentStatus string
-	jobStatus      string
+	job                     db.IndexingJob
+	document                db.Document
+	chunks                  []db.CreateChunkRow
+	documentStatus          string
+	jobStatus               string
+	deleted                 bool
+	deleteAfterIndexingMark bool
 }
 
 func (f *fakeStore) LeaseIndexingJobs(context.Context, db.LeaseIndexingJobsParams) ([]db.IndexingJob, error) {
@@ -99,11 +147,22 @@ func (f *fakeStore) GetDocumentBytes(context.Context, uuid.UUID) (db.Document, e
 	if f.document.ID == uuid.Nil {
 		return db.Document{}, errors.New("missing document")
 	}
+	if f.deleted {
+		return db.Document{}, errors.New("document deleted")
+	}
 	return f.document, nil
 }
 
 func (f *fakeStore) MarkDocumentStatus(_ context.Context, arg db.MarkDocumentStatusParams) (db.MarkDocumentStatusRow, error) {
+	if f.deleted {
+		return db.MarkDocumentStatusRow{}, errors.New("document deleted")
+	}
 	f.documentStatus = arg.Status
+	if arg.Status == documents.StatusIndexing && f.deleteAfterIndexingMark {
+		f.deleted = true
+		f.document.Status = documents.StatusDeleted
+		f.documentStatus = documents.StatusDeleted
+	}
 	return db.MarkDocumentStatusRow{ID: arg.ID, Status: arg.Status}, nil
 }
 
