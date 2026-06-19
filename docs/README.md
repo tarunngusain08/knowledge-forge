@@ -29,6 +29,9 @@ Read these in order if you are new to the repository:
 4. [Roadmap](roadmap.md)
    What is complete, what is selected next, what is only a candidate, and what
    is explicitly not started.
+5. [Documentation Gap Analysis](../DOCS-GAP-ANALYSIS.md)
+   What was improved during the documentation refresh and what screenshot or
+   demo gaps remain.
 
 ## Product And Architecture
 
@@ -89,6 +92,21 @@ Desktop evidence packages or intermediate audit notes.
 | Phase 18.8 security hardening | [Phase 18.8 Security Hardening](proof/phase18-8-security-hardening.md) | Medium-severity security findings were reproduced, fixed, and regression-tested. |
 | Phase 19 decision | [Phase 19 Planning Review](proof/phase19-planning-review.md) | Larger Corpus Expansion was selected as the next direction based on current evidence. |
 | Independent challenge | [Independent Roadmap Challenge](proof/independent-roadmap-challenge.md) | The Phase 19 decision survived adversarial review, but with reservations around external validity. |
+
+## Visual Evidence
+
+The repository includes small, evidence-backed visual summaries generated from
+committed docs and benchmark artifacts:
+
+| Visual | Path | Source Evidence |
+| --- | --- | --- |
+| Architecture overview | [architecture-overview.png](images/architecture/architecture-overview.png) | `README.md`, `docs/architecture.md`, Phase 18.6/18.8 security proof. |
+| Benchmark summary | [benchmark-summary.png](images/benchmarks/benchmark-summary.png) | Phase 18 and Phase 18.5 committed benchmark JSON. |
+| Benchmark comparison | [benchmark-comparison.png](images/benchmarks/benchmark-comparison.png) | Phase 18 committed benchmark JSON. |
+| Security posture summary | [security-posture-summary.png](images/security/security-posture-summary.png) | Phase 18.6 and Phase 18.8 proof docs. |
+
+UI screenshots are intentionally not committed until a real runnable demo
+session is available. See [UI Screenshot Inventory](images/ui/README.md).
 
 ## Benchmarks And Validation
 

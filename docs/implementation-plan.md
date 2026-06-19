@@ -262,6 +262,7 @@ Implemented scope:
 Tradeoffs:
 
 - Raw audit folders remain local evidence and are not committed.
-- Phase 18 benchmark proof has not started in this branch.
-- Phase 19 static code intelligence remains a future candidate and must be
-  justified by Phase 18 measurements.
+- This document is historical. Use `docs/roadmap.md` for the current state:
+  Phase 18 and 18.5 benchmark proof are complete, Phase 19 Larger Corpus
+  Expansion is selected next, and Static Code Intelligence remains only an
+  investigation candidate.

@@ -9,6 +9,35 @@ project is built as a production-style Go and GenAI/RAG system: the useful unit
 is not a fluent answer, but a claim that can be traced back to files, line
 ranges, repository snapshots, citations, and validation evidence.
 
+One-sentence value proposition:
+
+```text
+Knowledge Forge helps engineers ask hard questions about a repository and trust
+the answer because every useful claim is tied back to source evidence.
+```
+
+Current maturity snapshot:
+
+| Area | Current Status |
+| --- | --- |
+| Product correctness | Phase 17 accepted: 6/6 gates, 0 evaluator issues |
+| Benchmark value | Phase 18 partially proven against keyword and retrieval-only baselines |
+| Multi-corpus proof | Phase 18.5 generalized within infrastructure/tooling scope and was moderately stable |
+| Security posture | Phase 18.6 tenant isolation and Phase 18.8 hardening complete |
+| Release readiness | Phase 18.7 READY |
+| Roadmap | Phase 19 Larger Corpus Expansion selected, not started |
+
+The repository is intentionally evidence-heavy. The fastest way to understand
+the project is:
+
+1. Read this README for the product, architecture, setup, proof summary, and
+   roadmap.
+2. Open [docs/README.md](docs/README.md) for the curated documentation map.
+3. Open [docs/readiness-scorecard.md](docs/readiness-scorecard.md) for the
+   current maturity scorecard.
+4. Open [docs/roadmap.md](docs/roadmap.md) for completed, selected, candidate,
+   rejected, and not-started work.
+
 ## Why This Project Exists
 
 Most AI code assistants are easy to impress with and hard to trust. They can
@@ -28,6 +57,26 @@ If evidence is insufficient:
 That makes the system useful for codebase onboarding, architecture review,
 repository due diligence, implementation planning, impact analysis, and
 interview or portfolio demonstrations where trust matters more than prose.
+
+Target users:
+
+- engineers joining or reviewing a complex repository
+- staff engineers and tech leads evaluating architecture or risk
+- platform teams that need source-grounded implementation planning
+- reviewers who want to inspect evidence, citations, traces, and benchmark
+  results rather than accept AI answers at face value
+- interviewers or portfolio reviewers who want to see production-style RAG
+  engineering, not just a chatbot demo
+
+Non-goals:
+
+- autonomous code changes
+- PR creation or code generation
+- graph retrieval by default
+- static code intelligence by default
+- broad claims across every repository type before broader corpus evidence
+- unsupported answers that rely on external or stale knowledge instead of
+  repository evidence
 
 ## North-Star Workflow
 
@@ -117,6 +166,8 @@ agents, or generate patches. They summarize observed evidence, likely affected
 files, missing context, test considerations, and risks.
 
 ## Architecture At A Glance
+
+![Knowledge Forge architecture overview](docs/images/architecture/architecture-overview.png)
 
 ```text
 User
@@ -211,6 +262,8 @@ merely by an API handler. It requires revenue-domain endpoint evidence.
 The current security posture is documented and regression-tested through Phase
 18.6 and Phase 18.8 proof artifacts.
 
+![Security posture summary](docs/images/security/security-posture-summary.png)
+
 Implemented guardrails include:
 
 - owner-scoped dense retrieval hydration
@@ -257,6 +310,52 @@ The important limitation is explicit: current benchmark evidence is strongest
 for infrastructure, platform, and developer-tooling repositories. It does not
 yet prove performance across all repository types.
 
+### Benchmark Summary
+
+![Benchmark evidence summary](docs/images/benchmarks/benchmark-summary.png)
+
+![Phase 18 benchmark comparison](docs/images/benchmarks/benchmark-comparison.png)
+
+Phase 18 answered whether Knowledge Forge retrieves and grounds repository
+evidence better than simple baselines on the synthetic enterprise monolith. The
+answer was `Partially Proven`: Knowledge Forge materially improved
+architecture, dependency/impact, and grounding categories, but did not
+materially outperform the stronger retrieval-only baseline for refusal behavior.
+
+Phase 18.5 answered whether those gains generalized beyond the synthetic
+fixture. The answer was `Generalized` within the infrastructure/platform/
+developer-tooling scope and `Moderately Stable` across synthetic, Helm, and
+OpenTelemetry Collector corpora.
+
+Key benchmark facts from committed result artifacts:
+
+| Evidence | Result |
+| --- | --- |
+| Phase 18 rows | 30 frozen synthetic-monolith rows |
+| Phase 18 correctness | 30/30 Knowledge Forge rows correct in the saved proof pack |
+| Phase 18.5 rows | 70 rows: 30 synthetic, 20 Helm, 20 OTel Collector |
+| Phase 18.5 correctness | 68/70 Knowledge Forge rows correct |
+| Phase 18.5 per corpus | Helm 20/20, OTel Collector 18/20, synthetic 30/30 |
+| Phase 18.5 stability | `Moderately Stable`, max primary-metric range 0.125 |
+
+The benchmark source of truth remains the committed JSON/Markdown under
+`eval-runner/benchmarks/results/phase18/` and
+`eval-runner/benchmarks/results/phase18_5/`. The images in this README are
+rendered summaries of those committed results, not new benchmark outputs.
+
+### Evidence Trail
+
+| Milestone | What It Proved | Canonical Evidence |
+| --- | --- | --- |
+| Phase 17 | Product conformance: 6/6 gates, 0 evaluator issues | [Phase 17 Validation Proof](docs/proof/phase17-validation.md) |
+| Phase 18 | Value against keyword and retrieval-only baselines | [Phase 18 Benchmark Proof](docs/evaluations/phase18-benchmark-proof.md) |
+| Phase 18.5 | Multi-corpus generalization within infrastructure/tooling scope | [Phase 18.5 Multi-Corpus Benchmark](docs/evaluations/phase18-5-multi-corpus-benchmark.md) |
+| Phase 18.6 | Tenant isolation and deployment trust-boundary remediation | [Phase 18.6 Security Remediation](docs/proof/phase18-6-security-remediation.md) |
+| Phase 18.7 | Release readiness across architecture, security, benchmarks, docs, onboarding, and deployment | [Phase 18.7 Release Readiness](docs/proof/phase18-7-release-readiness.md) |
+| Phase 18.8 | Medium-severity security hardening: IDOR, refusal leakage, lifecycle, upload limits | [Phase 18.8 Security Hardening](docs/proof/phase18-8-security-hardening.md) |
+| Phase 19 planning | Larger Corpus Expansion selected as the next evidence-gathering direction | [Phase 19 Planning Review](docs/proof/phase19-planning-review.md) |
+| Independent challenge | The Phase 19 decision survived adversarial review with reservations | [Independent Roadmap Challenge](docs/proof/independent-roadmap-challenge.md) |
+
 ## Run Locally
 
 Prerequisites:
@@ -265,6 +364,17 @@ Prerequisites:
 - Python 3
 - Node.js and npm
 - Docker and Docker Compose
+
+Important local defaults:
+
+| Setting | Local / Safe Default | Meaning |
+| --- | --- | --- |
+| `DATABASE_URL` | from `.env.example` / Docker Compose | PostgreSQL connection |
+| `PINECONE_API_KEY` | optional for mock/local tests | Dense retrieval provider key |
+| `VERTEX_PROJECT_ID` / Vertex settings | optional for mock/local tests | Gemini, embeddings, and reranking provider config |
+| `ALLOW_LOCAL_REPOSITORY_PATHS` | `false` for hosted deployments | Prevents hosted users from indexing server-local paths |
+| `ALLOWED_GIT_REMOTE_HOSTS` | approved Git hosts only | Restricts clone targets |
+| `INTERNAL_WORKER_TOKEN` | required for internal worker routes in hosted deployments | Protects worker job-processing endpoints |
 
 Start with the local mock-provider path:
 

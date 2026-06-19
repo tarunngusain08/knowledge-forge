@@ -52,8 +52,8 @@ overlap. No files were deleted or archived in this branch.
 
 | Path | Recommendation |
 | --- | --- |
-| `docs/implementation-plan.md` | Future update should mark Phase 17 accepted and point to `docs/roadmap.md` for current next steps. |
-| `docs/evaluation.md` | Future update should link to Phase 18 benchmark reports after they exist. |
+| `docs/implementation-plan.md` | Historical milestone notes. Keep only as history; use `docs/roadmap.md` for current status. |
+| `docs/evaluation.md` | Keep as metric vocabulary and runner notes; use `docs/evaluations/phase18-benchmark-proof.md` and `docs/evaluations/phase18-5-multi-corpus-benchmark.md` for current benchmark proof. |
 | `deploy/*` | Future update should include any changes needed when real cloud deployment is exercised. |
 
 ## Duplicate Content Risk

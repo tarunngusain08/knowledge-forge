@@ -78,8 +78,8 @@ See:
 - Why provider interfaces keep LangChainGo, Vertex AI, and Pinecone outside core
   business logic.
 - Why Deep-Dive Reports use a shared evidence pass before targeted retrieval.
-- Why Phase 18 must prove quality with benchmarks before Phase 19 adds static
-  intelligence.
+- How Phase 18 and 18.5 benchmark proof prevented premature static
+  intelligence or graph retrieval work.
 
 ## Known Boundaries
 
