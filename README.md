@@ -246,6 +246,10 @@ Start here:
 
 - [Documentation Index](docs/README.md)
 - [Phase 17 Validation Proof](docs/proof/phase17-validation.md)
+- [Phase 18 Benchmark Proof](docs/evaluations/phase18-benchmark-proof.md)
+- [Phase 18.5 Multi-Corpus Benchmark](docs/evaluations/phase18-5-multi-corpus-benchmark.md)
+- [Phase 18.6 Security Remediation](docs/proof/phase18-6-security-remediation.md)
+- [Phase 18.7 Release Readiness](docs/proof/phase18-7-release-readiness.md)
 - [Roadmap](docs/roadmap.md)
 - [Readiness Scorecard](docs/readiness-scorecard.md)
 

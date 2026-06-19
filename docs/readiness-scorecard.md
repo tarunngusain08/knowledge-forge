@@ -1,14 +1,17 @@
 # Project Readiness Scorecard
 
-This scorecard summarizes the validated state after Phase 17.
+This scorecard summarizes the validated state after Phase 18.6.
 
 ## Overall Status
 
 ```text
 Phase 17: accepted
+Phase 18: partially proven benchmark value
+Phase 18.5: generalized within infrastructure/tooling scope
+Phase 18.6: security remediation complete
 Acceptance gates: 6/6 pass
 Evaluator issues: 0
-Recommended next step: Phase 18 Benchmark Proof Pack
+Recommended next step: Phase 18.7 Release Readiness Review, then human-reviewed Phase 19 planning
 ```
 
 ## Feature Completeness
@@ -26,8 +29,10 @@ Recommended next step: Phase 18 Benchmark Proof Pack
 | React/Vite UI | Implemented | Primary product UI; Streamlit remains fallback. |
 | Observability and costs | Implemented | Structured logs, traces, provenance, token/cost accounting. |
 | Acceptance validation | Implemented and passing | Six gates pass with zero evaluator issues. |
-| Phase 18 benchmark proof | Not started | Validated next step. |
-| Phase 19 static intelligence | Future candidate | Must be justified by Phase 18 measured weakness. |
+| Phase 18 benchmark proof | Complete and partially proven | Knowledge Forge outperformed baselines in architecture, dependency/impact, and grounding categories. |
+| Phase 18.5 multi-corpus benchmark | Complete within infrastructure/tooling scope | Helm and OpenTelemetry Collector results generalized with moderate stability. |
+| Phase 18.6 security remediation | Complete | Tenant isolation, trace authorization, repository input guards, and internal worker auth are documented and regression-tested. |
+| Phase 19 static intelligence | Future candidate | Must be justified by benchmark and release-readiness evidence; not started. |
 
 ## Validation Coverage
 
@@ -41,17 +46,21 @@ Recommended next step: Phase 18 Benchmark Proof Pack
 | Docker Compose config check | Required in validation flow |
 | Acceptance validator | Passing after Phase 17 |
 | Reality audit against real outputs | Passing after Phase 17 |
+| Phase 18 benchmark proof | Published |
+| Phase 18.5 multi-corpus benchmark | Published |
+| Phase 18.6 security proof | Published |
 
 ## Known Limitations
 
-- Phase 18 benchmark proof has not been published yet.
+- Benchmark proof is strongest for synthetic and infrastructure/tooling corpora;
+  it does not yet prove generalization to all repository types.
 - Static code intelligence is not enabled as a validated default.
 - Graph retrieval, multi-repo intelligence, autonomous agents, PR review, and
   code generation are out of scope.
 - Reports are generated on demand and not persisted as first-class report
   records in v1.
-- Enterprise-scale SaaS tenancy is documented as a future path, not implemented
-  as a validated feature.
+- Tenant isolation for document retrieval and retrieval traces is hardened, but
+  full enterprise SaaS tenancy remains a future product path.
 
 ## Readiness Assessment
 
@@ -61,13 +70,11 @@ Recommended next step: Phase 18 Benchmark Proof Pack
 | Architecture | Strong | Clear Go service boundaries, provider interfaces, and GCP deployment path. |
 | Validation rigor | Strong | Hardened acceptance framework and accepted Phase 17 reality result. |
 | Demo readiness | Strong | Repository import, Q&A, Deep-Dive Report, evidence, and proof story are aligned. |
-| Benchmark maturity | Medium | Acceptance passes; broader comparative benchmark proof is the next step. |
-| Production SaaS maturity | Medium | Deployment and multi-tenancy notes exist, but full SaaS operation is future work. |
+| Benchmark maturity | Strong | Phase 18 and 18.5 provide baseline and multi-corpus evidence, with stated scope limits. |
+| Security maturity | Strong | Phase 18.6 remediated tenant-isolation and deployment trust-boundary findings with regression tests. |
+| Production SaaS maturity | Medium | Tenant isolation and deployment guardrails exist, but full SaaS operation is future work. |
 
 ## Recommended Next Step
 
-Proceed to Phase 18 only after this consolidation branch is reviewed and merged.
-
-Phase 18 should produce a small, high-quality benchmark proof pack that compares
-Knowledge Forge with naive semantic retrieval and documents improved, unchanged,
-and degraded questions.
+Complete the Phase 18.7 release-readiness review and obtain human acceptance
+before Phase 19 planning begins.

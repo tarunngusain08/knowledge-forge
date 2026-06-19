@@ -11,6 +11,8 @@ claim.
   demo flow.
 - [Phase 17 Validation Proof](proof/phase17-validation.md): accepted validation
   result, root causes, fixes, and final gate status.
+- [Phase 18.6 Security Remediation](proof/phase18-6-security-remediation.md):
+  tenant isolation, deployment trust-boundary findings, and security guardrails.
 - [Roadmap](roadmap.md): what is complete, what is validated next, and what is
   not started.
 - [Readiness Scorecard](readiness-scorecard.md): feature completeness,
@@ -48,6 +50,11 @@ claim.
   Helm and OpenTelemetry Collector generalization proof.
 - [Phase 17 Validation Proof](proof/phase17-validation.md): only detailed
   Phase 17 proof narrative.
+- [Phase 18.6 Security Remediation](proof/phase18-6-security-remediation.md):
+  current security remediation proof narrative.
+- [Phase 18.7 Release Readiness](proof/phase18-7-release-readiness.md):
+  release-style review for architecture, security, benchmarks, docs,
+  onboarding, and deployment.
 - [Phase 17 Retrospective](postmortems/phase17-retrospective.md): reusable
   operating lessons for Phase 18.
 - [Deep-Dive Report Case Study](case-studies/deep-dive-report.md): product
